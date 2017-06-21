@@ -1,5 +1,7 @@
+Processed source files are plain text with no markup.  (All text from unprocessed source files should end up here along with any raw text previously gathered.)
+  
 
-Source files include:
+Unprocessed source files include:
 * **Presidential_News_Confs_(2009-).json**
 (http://www.presidency.ucsb.edu/news_conferences.php)
 
