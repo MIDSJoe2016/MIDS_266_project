@@ -1,8 +1,8 @@
 Processed source files are plain text with no markup.  (All text from unprocessed source files should end up here along with any raw text previously gathered.)
 
 Current source for raw text source files include:
-* http://stateoftheunionaddress.org/
-* http://quod.lib.umich.edu/l/lincoln/
+* State of the Union Address (http://stateoftheunionaddress.org/)
+* The Collected Works of Abraham Lincoln (http://quod.lib.umich.edu/l/lincoln/)
 
 Unprocessed source files include:
 * **Presidential_News_Confs_(2009-).json**
