@@ -14,4 +14,4 @@ Trump_Saudi_May2017: http://time.com/4787609/donald-trump-saudi-arabia-speech-2/
 Trump_Arlington_May2017: http://time.com/4797345/donald-trump-memorial-day-transcript-arlington-national-cemetery/
 Trump_Congress_Feb2017: http://time.com/4686621/trump-congress-address-transcript/
 Trump_Paris_June2017: http://transcripts.factcheck.org/president-trump-paris-climate-accord/
-Trump_NRCC_March2017: 
+Trump_NRCC_March2017: http://transcripts.factcheck.org/remarks-president-nrcc-dinner/
