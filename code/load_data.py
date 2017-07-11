@@ -1,4 +1,4 @@
-import json, os, re, shutil, sys, time
+import json, os, re, shutil, sys, time, glob
 import collections, itertools
 import unittest
 from IPython.display import display, HTML
@@ -60,12 +60,12 @@ full_name = {"Obama" : "Barack Obama", "Lincoln": "Abraham Lincoln", "Trump": "D
 def read_processed_data(dir):
     print "Processing", dir, "..."
     pres_dict = {}
-    for filename in os.listdir(dir):
-        arr = filename.split("_")
+    for filename in glob.glob(os.path.join(dir, '*.txt')):
+        arr = filename.replace(dir,'').split("_")
         president = arr[0]
     
         try:
-            vocab, sents = get_vocab(dir + filename)
+            vocab, sents = get_vocab(filename)
             add_to_dict(pres_dict, full_name[president], vocab, sents)
         except UnicodeDecodeError as err:
             print filename, ":", err
@@ -75,8 +75,8 @@ def read_processed_data(dir):
 #############################
 def read_unprocessed_data(pres_dict, dir):
     print "Processing", dir, "..."
-    for json_file in os.listdir(dir):
-        json_data=open(dir + json_file)
+    for json_file in glob.glob(os.path.join(dir, '*.json')):
+        json_data=open(json_file)
         data = json.load(json_data)
         json_data.close()
         attrName = 'debate' if 'Debate' in json_file else 'speeches'
@@ -112,7 +112,7 @@ def read_unprocessed_data(pres_dict, dir):
 # Create train and test data set
 # Number of words used by 1 president
 def append_matrices(a,b):
-    if (a == None):
+    if (a is None):
         return b
     else:
         return np.concatenate((a, b))
