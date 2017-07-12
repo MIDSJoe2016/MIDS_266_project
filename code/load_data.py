@@ -31,7 +31,7 @@ def get_vocab2(raw):
 
     
 def get_vocab(filename):
-    raw = open(filename).read().decode("UTF-8")
+    raw = open(filename).read().decode("UTF-8").encode("ascii","ignore")
     return get_vocab2(raw)
 
 def add_to_dict(pres_dict, president, vocab, sents):
