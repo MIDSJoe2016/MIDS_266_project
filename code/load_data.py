@@ -2,6 +2,8 @@ import json, os, re, shutil, sys, time, glob
 import collections, itertools
 import unittest
 from IPython.display import display, HTML
+from sklearn.utils import shuffle
+
 
 # NLTK for NLP utils and corpora
 import nltk
@@ -165,7 +167,12 @@ def get_train_test(pres_dict, num_words_limit, batch_size=100):
             X_train = append_matrices(X_train, X[:train_len])
             y_test = append_matrices(y_test, y[train_len:])
             X_test = append_matrices(X_test, X[train_len:])
-        
+
+    # shuffle train data
+    #print "Before shuffle", X_train, y_train
+    X_train, y_train = shuffle(X_train, y_train, random_state=42)      
+    #print "After shuffle", X_train, y_train
+                                        
     return president_int, vocabulary.Vocabulary(all_words), y_train, X_train, y_test, X_test
 
 # Convert 2d matrix of words into 2d matrix of word ids
@@ -183,6 +190,46 @@ def create_train_test_data(pres_dict, num_of_words, batch_size):
     # Convert words to ids
     X_train = word_matrix_2ids(vocab, X_train) 
     X_test = word_matrix_2ids(vocab, X_test)
-    return president_int, y_train, X_train, y_test, X_test
+    return president_int, vocab.size, y_train, X_train, y_test, X_test
 
+
+##############################
+# from scikit-learn examples @
+# http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html 
+import itertools
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    #plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
 
