@@ -12,7 +12,7 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[2]:
+# In[13]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
@@ -243,7 +243,7 @@ def ReSQRT(x):
     return result
 
 
-# In[12]:
+# In[ ]:
 
 
 from keras.models import Sequential
@@ -260,7 +260,7 @@ optimizer = Adagrad(lr=0.01)
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='loss_value', factor=0.2,
-              patience=5, min_lr=0.0001, verbose=1)
+              patience=5, verbose=1)
 csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
 
 # assemble & compile model
