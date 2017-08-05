@@ -1,3 +1,12 @@
+#-----
+# include to ensure results are the same between machines
+from numpy.random import seed
+seed(1)
+from tensorflow import set_random_seed
+set_random_seed(2)
+
+#-----
+# load data
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
 
