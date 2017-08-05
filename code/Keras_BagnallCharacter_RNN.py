@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[12]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -18,7 +18,7 @@ set_random_seed(2)
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
-# In[3]:
+# In[14]:
 
 
 import glob, os, json, re, unicodedata
@@ -86,7 +86,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[4]:
+# In[15]:
 
 
 #
@@ -111,7 +111,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[5]:
+# In[16]:
 
 
 import numpy as np
@@ -136,7 +136,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[6]:
+# In[17]:
 
 
 from keras.preprocessing.text import Tokenizer
@@ -154,7 +154,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[7]:
+# In[18]:
 
 
 #
@@ -187,7 +187,7 @@ split_size = len( split_text ) / max_seq_len
 print "\nTotal split groups:", split_size, "= (",len( split_text ),"/",max_seq_len,")"
 
 
-# In[8]:
+# In[19]:
 
 
 # split amongst speaker samples, not the whole population of samples
@@ -211,7 +211,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[9]:
+# In[20]:
 
 
 #
@@ -231,7 +231,7 @@ train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
 
 
-# In[10]:
+# In[ ]:
 
 
 #custom activation from Bagnall 2015
@@ -259,7 +259,7 @@ epochs = 100
 optimizer = Adagrad(lr=0.01)
 
 # define any callbacks
-reduce_lr = ReduceLROnPlateau(monitor='loss_value', factor=0.2,
+reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.2,
               patience=5, verbose=1)
 csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
 
@@ -378,16 +378,10 @@ plt.figure(figsize=(10,10))
 plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
                       title='Confusion matrix, without normalization')
 
-# #Plot normalized confusion matrix
-# plt.figure(figsize=(10,10))
-# plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)), normalize=True,
-#                       title='Normalized confusion matrix')
+#Plot normalized confusion matrix
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)), normalize=True,
+                      title='Normalized confusion matrix')
 
 plt.show()
-
-
-# In[ ]:
-
-
-
 
