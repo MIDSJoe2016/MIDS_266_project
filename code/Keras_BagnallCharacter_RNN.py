@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[12]:
+# In[1]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[13]:
+# In[2]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
-# In[14]:
+# In[3]:
 
 
 import glob, os, json, re, unicodedata
@@ -86,7 +86,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[15]:
+# In[4]:
 
 
 #
@@ -111,7 +111,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[16]:
+# In[5]:
 
 
 import numpy as np
@@ -136,7 +136,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[17]:
+# In[6]:
 
 
 from keras.preprocessing.text import Tokenizer
@@ -154,7 +154,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[18]:
+# In[7]:
 
 
 #
@@ -187,7 +187,7 @@ split_size = len( split_text ) / max_seq_len
 print "\nTotal split groups:", split_size, "= (",len( split_text ),"/",max_seq_len,")"
 
 
-# In[19]:
+# In[8]:
 
 
 # split amongst speaker samples, not the whole population of samples
@@ -211,7 +211,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[20]:
+# In[9]:
 
 
 #
@@ -231,7 +231,7 @@ train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
 
 
-# In[ ]:
+# In[10]:
 
 
 #custom activation from Bagnall 2015
@@ -243,16 +243,16 @@ def ReSQRT(x):
     return result
 
 
-# In[ ]:
+# In[15]:
 
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Embedding, SimpleRNN, Dropout
 from keras.optimizers import Adagrad, adam
-from keras.callbacks import ReduceLROnPlateau, CSVLogger
+from keras.callbacks import ReduceLROnPlateau, CSVLogger, EarlyStopping
 
 # define operating vars
-batch_size = 50
+batch_size = 100
 epochs = 100
 
 # define optimizer
@@ -260,8 +260,11 @@ optimizer = Adagrad(lr=0.01)
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.2,
-              patience=5, verbose=1)
+              patience=1, verbose=1)
 csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
+early_stop = EarlyStopping(monitor='categorical_accuracy',
+              min_delta=0.01,
+              patience=2)
 
 # assemble & compile model
 print('Build model...')
@@ -282,7 +285,7 @@ model.fit(train_X,
           train_y, 
           batch_size=batch_size, 
           epochs=epochs,
-          callbacks=[reduce_lr, csv_logger],
+          callbacks=[reduce_lr, csv_logger, early_stop],
           verbose=1)
 
 
