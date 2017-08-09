@@ -1,8 +1,7 @@
 
 # coding: utf-8
 
-# In[39]:
-
+# In[1]:
 
 # Include so results on different machines are (should be) the same.
 from numpy.random import seed
@@ -12,14 +11,12 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[40]:
-
+# In[ ]:
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
-# In[62]:
-
+# In[ ]:
 
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
@@ -90,8 +87,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[63]:
-
+# In[ ]:
 
 #
 # Bagnall 2015 text pre-processing
@@ -115,8 +111,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[64]:
-
+# In[ ]:
 
 #
 # Join all speeches into one massive per president
@@ -143,8 +138,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[65]:
-
+# In[ ]:
 
 #
 # Tokenize words into chars
@@ -165,8 +159,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[86]:
-
+# In[ ]:
 
 #
 # Split speeches into subsequences 
@@ -180,7 +173,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 100
+max_seq_len = 50
 
 # create new speech/label holders
 split_text = []
@@ -197,8 +190,7 @@ print "Sample splits, labels:", len( split_text ), len( split_labels )
 print "\nOriginal total chars:", len( split_text ) * max_seq_len
 
 
-# In[87]:
-
+# In[ ]:
 
 #
 # split amongst speaker samples, not the whole population of samples
@@ -223,8 +215,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[88]:
-
+# In[ ]:
 
 #
 # Prep test/train
@@ -248,8 +239,7 @@ train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
 
 
-# In[89]:
-
+# In[ ]:
 
 #
 # One-hot encoding samples
@@ -274,7 +264,6 @@ print "...and reshaping to ", test_X.shape
 
 
 # In[ ]:
-
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -302,9 +291,8 @@ def ReSQRT(x):
 
 # In[ ]:
 
-
 from keras.models import Model
-from keras.layers import Input, Dense, Activation, Embedding, SimpleRNN, Dropout
+from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM
 from keras.optimizers import Adagrad, adam
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
 
@@ -323,7 +311,7 @@ csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
 # assemble & compile model
 print('Build model...')
 main_input = Input(shape=(max_seq_len,unique_chars,))
-rnn = SimpleRNN(units=100,activation='relu',go_backwards=False)(main_input)
+rnn = Bidirectional(SimpleRNN(units=100,activation='relu'))(main_input)
 drop = Dropout(0.5)(rnn)
 main_output = Dense(len(labels),activation='softmax')(rnn)
 model = Model(inputs=[main_input], outputs=[main_output])
@@ -346,8 +334,7 @@ model.save('Keras_BagnallCharacterRNN_training.h5')
 del model
 
 
-# In[35]:
-
+# In[ ]:
 
 # Load computed model
 from keras.models import load_model
@@ -356,8 +343,7 @@ from keras.models import load_model
 model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
-# In[84]:
-
+# In[ ]:
 
 # Evaluate performance
 print "Evaluating test data..."
@@ -374,8 +360,7 @@ test_y_collapsed = np.argmax(test_y, axis=1)
 print "Done prediction."
 
 
-# In[85]:
-
+# In[ ]:
 
 # Plot confusion matrix
 #   from scikit-learn examples @
@@ -437,7 +422,6 @@ plt.show()
 
 
 # In[ ]:
-
 
 
 
