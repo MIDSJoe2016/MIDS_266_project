@@ -11,12 +11,12 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[ ]:
+# In[2]:
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
-# In[ ]:
+# In[3]:
 
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
@@ -25,21 +25,21 @@ load_verbose = 0
 loaded_labels = []
 loaded_text = []
 presidents = [
-#     "Barack Obama",
-#     "Donald J. Trump",
-#     "Dwight D. Eisenhower",
+    "Barack Obama",
+    "Donald J. Trump",
+    "Dwight D. Eisenhower",
     "Franklin D. Roosevelt",
     "George Bush",
     "George W. Bush",
 #     "Gerald R. Ford",
     "Harry S. Truman",
 #     "Herbert Hoover",
-#     "Jimmy Carter",
-#     "John F. Kennedy",
-#     "Lyndon B. Johnson",
-#     "Richard Nixon",
-#     "Ronald Reagan",
-#     "William J. Clinton"
+    "Jimmy Carter",
+    "John F. Kennedy",
+    "Lyndon B. Johnson",
+    "Richard Nixon",
+    "Ronald Reagan",
+    "William J. Clinton"
 ]
 
 labels = {}
@@ -48,21 +48,21 @@ for idx, name in enumerate(presidents):
 
 # load raw text files straight in, no parsing
 file_to_label = {
-#     "Obama": "Barack Obama",
-#     "Trump": "Donald J. Trump",
-#     "Eisenhower": "Dwight D. Eisenhower",
+    "Obama": "Barack Obama",
+    "Trump": "Donald J. Trump",
+    "Eisenhower": "Dwight D. Eisenhower",
     "Roosevelt": "Franklin D. Roosevelt",
     "Bush": "George Bush",
     "WBush": "George W. Bush",
 #     "Ford": "Gerald R. Ford",
     "Truman": "Harry S. Truman",
 #     "Hoover": "Herbert Hoover",
-#     "Carter": "Jimmy Carter",
-#     "Kennedy": "John F. Kennedy",
-#     "Johnson": "Lyndon B. Johnson",
-#     "Nixon": "Richard Nixon",
-#     "Reagan": "Ronald Reagan",
-#     "Clinton": "William J. Clinton"
+    "Carter": "Jimmy Carter",
+    "Kennedy": "John F. Kennedy",
+    "Johnson": "Lyndon B. Johnson",
+    "Nixon": "Richard Nixon",
+    "Reagan": "Ronald Reagan",
+    "Clinton": "William J. Clinton"
 }
 
 directory = "../data/processed/"
@@ -87,7 +87,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[ ]:
+# In[4]:
 
 #
 # Bagnall 2015 text pre-processing
@@ -111,7 +111,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[ ]:
+# In[5]:
 
 #
 # Join all speeches into one massive per president
@@ -138,7 +138,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[ ]:
+# In[6]:
 
 #
 # Tokenize words into chars
@@ -159,7 +159,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[ ]:
+# In[7]:
 
 #
 # Split speeches into subsequences 
@@ -190,7 +190,7 @@ print "Sample splits, labels:", len( split_text ), len( split_labels )
 print "\nOriginal total chars:", len( split_text ) * max_seq_len
 
 
-# In[ ]:
+# In[8]:
 
 #
 # split amongst speaker samples, not the whole population of samples
@@ -215,7 +215,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[ ]:
+# In[9]:
 
 #
 # Prep test/train
@@ -239,7 +239,7 @@ train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
 
 
-# In[ ]:
+# In[10]:
 
 #
 # One-hot encoding samples
@@ -263,7 +263,7 @@ test_X = np.reshape(test_X,(test_X.shape[0],max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[ ]:
+# In[11]:
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -289,7 +289,7 @@ def ReSQRT(x):
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[ ]:
+# In[12]:
 
 from keras.models import Model
 from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM
@@ -298,7 +298,7 @@ from keras.callbacks import ReduceLROnPlateau, CSVLogger
 
 # define operating vars
 batch_size = 100
-epochs = 50
+epochs = 100
 
 # define optimizer
 optimizer = Adagrad(lr=0.01)
@@ -334,7 +334,7 @@ model.save('Keras_BagnallCharacterRNN_training.h5')
 del model
 
 
-# In[ ]:
+# In[13]:
 
 # Load computed model
 from keras.models import load_model
@@ -343,7 +343,7 @@ from keras.models import load_model
 model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
-# In[ ]:
+# In[14]:
 
 # Evaluate performance
 print "Evaluating test data..."
@@ -360,7 +360,7 @@ test_y_collapsed = np.argmax(test_y, axis=1)
 print "Done prediction."
 
 
-# In[ ]:
+# In[15]:
 
 # Plot confusion matrix
 #   from scikit-learn examples @
