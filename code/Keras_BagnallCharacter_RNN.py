@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[39]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[2]:
+# In[40]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
-# In[3]:
+# In[62]:
 
 
 import glob, os, json, re, unicodedata
@@ -27,42 +27,46 @@ from bs4 import BeautifulSoup
 load_verbose = 0
 loaded_labels = []
 loaded_text = []
-presidents = ["Barack Obama",
-          "Donald J. Trump",
-          "Dwight D. Eisenhower",
-          "Franklin D. Roosevelt",
-          "George Bush",
-          "George W. Bush",
-#          "Gerald R. Ford",
-          "Harry S. Truman",
-#          "Herbert Hoover",
-          "Jimmy Carter",
-          "John F. Kennedy",
-          "Lyndon B. Johnson",
-          "Richard Nixon",
-          "Ronald Reagan",
-          "William J. Clinton"]
+presidents = [
+#     "Barack Obama",
+#     "Donald J. Trump",
+#     "Dwight D. Eisenhower",
+    "Franklin D. Roosevelt",
+    "George Bush",
+    "George W. Bush",
+#     "Gerald R. Ford",
+    "Harry S. Truman",
+#     "Herbert Hoover",
+#     "Jimmy Carter",
+#     "John F. Kennedy",
+#     "Lyndon B. Johnson",
+#     "Richard Nixon",
+#     "Ronald Reagan",
+#     "William J. Clinton"
+]
+
 labels = {}
 for idx, name in enumerate(presidents):
     labels[name] = idx
 
 # load raw text files straight in, no parsing
-file_to_label = {"Obama": "Barack Obama", 
-                     "Trump": "Donald J. Trump",
-                     "Eisenhower": "Dwight D. Eisenhower",
-                     "Roosevelt": "Franklin D. Roosevelt",
-                     "Bush": "George Bush",
-                     "WBush": "George W. Bush",
-#                     "Ford": "Gerald R. Ford",
-                     "Truman": "Harry S. Truman",
-#                     "Hoover": "Herbert Hoover",
-                     "Carter": "Jimmy Carter",
-                     "Kennedy": "John F. Kennedy",
-                     "Johnson": "Lyndon B. Johnson",
-                     "Nixon": "Richard Nixon",
-                     "Reagan": "Ronald Reagan",
-                     "Clinton": "William J. Clinton"
-                    }
+file_to_label = {
+#     "Obama": "Barack Obama",
+#     "Trump": "Donald J. Trump",
+#     "Eisenhower": "Dwight D. Eisenhower",
+    "Roosevelt": "Franklin D. Roosevelt",
+    "Bush": "George Bush",
+    "WBush": "George W. Bush",
+#     "Ford": "Gerald R. Ford",
+    "Truman": "Harry S. Truman",
+#     "Hoover": "Herbert Hoover",
+#     "Carter": "Jimmy Carter",
+#     "Kennedy": "John F. Kennedy",
+#     "Johnson": "Lyndon B. Johnson",
+#     "Nixon": "Richard Nixon",
+#     "Reagan": "Ronald Reagan",
+#     "Clinton": "William J. Clinton"
+}
 
 directory = "../data/processed/"
 for filename in glob.glob(os.path.join(directory, '*.txt')):
@@ -86,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[4]:
+# In[63]:
 
 
 #
@@ -95,31 +99,34 @@ print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "pres
 from string import maketrans
 import re
 
-chars_to_replace = "[]%!()>=*&_\n"
+chars_to_replace = "[]%!()>=*&_}+"
 sub_chars = len(chars_to_replace) * " "
 trantab = maketrans(chars_to_replace, sub_chars)
 for x in range(0,len(loaded_text)):
-    #"Various rare characters that seemed largely equivalent are mapped together..."
-    loaded_text[x] = re.sub('`', '', loaded_text[x])
-    #"...all digits in all languages are mapped to 7"
+    # "Various rare characters that seemed largely equivalent are mapped together..."
+    loaded_text[x] = re.sub('`', '\'', loaded_text[x])
+    # "...all digits in all languages are mapped to 7"
     loaded_text[x] = re.sub('[0-9]', '7', loaded_text[x])
-    #"...any character with a frequency lower than 1 in 10,000 is discarded." (+ \n)
+    # "...any character with a frequency lower than 1 in 10,000 is discarded."
     loaded_text[x] = loaded_text[x].translate(trantab)
-    #"Runs of whitespace are collapsed into a single space."
+    # "Runs of whitespace are collapsed into a single space."
     loaded_text[x] = re.sub(' +', ' ', loaded_text[x])
 
 print "Replacements complete."
 
 
-# In[5]:
+# In[64]:
 
 
+#
+# Join all speeches into one massive per president
+#  for later processing
+#
 import numpy as np
 from scipy import stats
 from operator import itemgetter
 from collections import defaultdict
 
-# compress all speeches down into one massive per president
 compressed_text = [None]*(len(labels))
 for key, value in sorted(labels.iteritems()):
     compressed_text[value] = ""
@@ -136,9 +143,12 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[6]:
+# In[65]:
 
 
+#
+# Tokenize words into chars
+#
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing import sequence
 
@@ -147,14 +157,15 @@ tokenizer = Tokenizer(char_level=True)
 tokenizer.fit_on_texts(compressed_text)
 tokenized_text = tokenizer.texts_to_sequences(compressed_text)
 
-unique_chars = len(tokenizer.word_counts)
+# there's an oddity in the encoding for some reason where a len+1 character occurs
+unique_chars = len(tokenizer.word_counts)+1
 
 print "Unique char count:", unique_chars
 print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[7]:
+# In[86]:
 
 
 #
@@ -169,7 +180,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 50
+max_seq_len = 100
 
 # create new speech/label holders
 split_text = []
@@ -182,15 +193,16 @@ for idx in range(0, len(tokenized_text)):
     split_text.extend(current_splits)
     split_labels.extend([current_label] * len(current_splits))
 
-print "Sample, label sizes:", len( split_text ), len( split_labels )
-split_size = len( split_text ) / max_seq_len
-print "\nTotal split groups:", split_size, "= (",len( split_text ),"/",max_seq_len,")"
+print "Sample splits, labels:", len( split_text ), len( split_labels )
+print "\nOriginal total chars:", len( split_text ) * max_seq_len
 
 
-# In[8]:
+# In[87]:
 
 
+#
 # split amongst speaker samples, not the whole population of samples
+#
 def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     train_text = []
     train_labels = []
@@ -211,7 +223,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[9]:
+# In[88]:
 
 
 #
@@ -219,22 +231,53 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
 #
 from sklearn.preprocessing import OneHotEncoder
 from keras.utils import to_categorical
+from sklearn.utils import class_weight
 
-#  
+# compute class weights to account for imbalanced classes
+y_weights = (class_weight.compute_class_weight('balanced', np.unique(split_labels), split_labels)).tolist()
+print "Class weights:\n", y_weights
+
+# split data smartly
 train_X, train_y, test_X, test_y = split_test_train(split_text, split_labels, 
-                                                    labels, train_pct=0.9)
+                                                    labels, train_pct=0.8)
 
-print "Splits: test = ", len(train_X), "train = ", len(test_X)
+print "Splits:\n Test = ", len(train_X), "\n Train = ", len(test_X)
 
 # one-hot encode classes
 train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
 
 
-# In[10]:
+# In[89]:
 
 
-#custom activation from Bagnall 2015
+#
+# One-hot encoding samples
+#
+from sklearn.preprocessing import OneHotEncoder
+
+enc = OneHotEncoder(sparse=False,n_values=unique_chars)
+
+train_X = np.array(train_X)
+print "Encoding train_X with dimensions ", train_X.shape
+train_X = enc.fit_transform(train_X)
+print "...to ", train_X.shape
+train_X = np.reshape(train_X,(train_X.shape[0],max_seq_len,unique_chars))
+print "...and reshaping to ", train_X.shape
+
+test_X = np.array(test_X)
+print "\nEncoding test_X with dimensions ", test_X.shape
+test_X = enc.transform(test_X)
+print "...to ", test_X.shape
+test_X = np.reshape(test_X,(test_X.shape[0],max_seq_len,unique_chars))
+print "...and reshaping to ", test_X.shape
+
+
+# In[ ]:
+
+
+# custom activation from Bagnall 2015
+#  we were never able to get this to work; either nan'ed or never converged
 import tensorflow as tf
 
 def ReSQRT(x):
@@ -243,37 +286,47 @@ def ReSQRT(x):
     return result
 
 
-# In[15]:
+# Bagnall proposes that the following possible values contribute to the success of the model:
+# 
+# | meta-parameter                  	| typical value                      	|
+# |---------------------------------	|------------------------------------	|
+# | initial adagrad learning scale  	| 0.1, 0.14, 0.2, 0.3                	|
+# | initial leakage between classes 	| 1/4N to 5/N                        	|
+# | leakage decay (per sub-epoch)   	| 0.67 to 0.9                        	|
+# | hidden neurons                  	| 79, 99, 119, 139                   	|
+# | presynaptic noise σ             	| 0, 0.1, 0.2, 0.3, 0.5              	|
+# | sub-epochs                      	| 6 to 36                            	|
+# | text direction                  	| forward or backward                	|
+# | text handling                   	| sequential, concatenated, balanced 	|
+# | initialisation                  	| gaussian, zero                     	|
+
+# In[ ]:
 
 
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Embedding, SimpleRNN, Dropout
+from keras.models import Model
+from keras.layers import Input, Dense, Activation, Embedding, SimpleRNN, Dropout
 from keras.optimizers import Adagrad, adam
-from keras.callbacks import ReduceLROnPlateau, CSVLogger, EarlyStopping
+from keras.callbacks import ReduceLROnPlateau, CSVLogger
 
 # define operating vars
 batch_size = 100
-epochs = 100
+epochs = 50
 
 # define optimizer
 optimizer = Adagrad(lr=0.01)
 
 # define any callbacks
-reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.2,
+reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
               patience=1, verbose=1)
 csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
-early_stop = EarlyStopping(monitor='categorical_accuracy',
-              min_delta=0.01,
-              patience=2)
 
 # assemble & compile model
 print('Build model...')
-model = Sequential()
-model.add(Embedding(unique_chars+1,100,input_length=max_seq_len))
-model.add(SimpleRNN(100,activation='relu'))
-#model.add(Dropout(0.5))
-model.add(Dense(len(labels), activation='softmax'))
-
+main_input = Input(shape=(max_seq_len,unique_chars,))
+rnn = SimpleRNN(units=100,activation='relu',go_backwards=False)(main_input)
+drop = Dropout(0.5)(rnn)
+main_output = Dense(len(labels),activation='softmax')(rnn)
+model = Model(inputs=[main_input], outputs=[main_output])
 
 model.compile(loss='categorical_crossentropy', 
               optimizer=optimizer, 
@@ -281,36 +334,29 @@ model.compile(loss='categorical_crossentropy',
 print(model.summary())
 
 # train
-model.fit(train_X, 
-          train_y, 
-          batch_size=batch_size, 
+model.fit([np.array(train_X)],
+          [np.array(train_y)],
+          batch_size=batch_size,
           epochs=epochs,
-          callbacks=[reduce_lr, csv_logger, early_stop],
+          class_weight = y_weights,
+          callbacks=[reduce_lr, csv_logger],
           verbose=1)
-
 
 model.save('Keras_BagnallCharacterRNN_training.h5')  
 del model
 
 
-# In[ ]:
-
-
-#----------------
-#----------------
-
-
-# In[ ]:
+# In[35]:
 
 
 # Load computed model
 from keras.models import load_model
 # returns a compiled model
 # identical to the previous one
-model = load_model('my_model.h5')
+model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
-# In[ ]:
+# In[84]:
 
 
 # Evaluate performance
@@ -328,7 +374,7 @@ test_y_collapsed = np.argmax(test_y, axis=1)
 print "Done prediction."
 
 
-# In[ ]:
+# In[85]:
 
 
 # Plot confusion matrix
@@ -359,6 +405,7 @@ def plot_confusion_matrix(cm, classes,
         print("Normalized confusion matrix")
     else:
         print('Confusion matrix, without normalization')
+        print(np.sum(cm,axis=0))
 
     print(cm)
 
@@ -383,8 +430,14 @@ plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
 
 #Plot normalized confusion matrix
 plt.figure(figsize=(10,10))
-plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)), normalize=True,
+plot_confusion_matrix(np.round(cnf_matrix,2), classes=(sorted(labels, key=labels.get)), normalize=True,
                       title='Normalized confusion matrix')
 
 plt.show()
+
+
+# In[ ]:
+
+
+
 
