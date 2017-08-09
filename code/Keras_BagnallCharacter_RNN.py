@@ -26,7 +26,7 @@ loaded_labels = []
 loaded_text = []
 presidents = [
     "Barack Obama",
-    "Donald J. Trump",
+#     "Donald J. Trump",
     "Dwight D. Eisenhower",
     "Franklin D. Roosevelt",
     "George Bush",
@@ -37,8 +37,8 @@ presidents = [
     "Jimmy Carter",
     "John F. Kennedy",
     "Lyndon B. Johnson",
-    "Richard Nixon",
-    "Ronald Reagan",
+#     "Richard Nixon",
+#     "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -49,7 +49,7 @@ for idx, name in enumerate(presidents):
 # load raw text files straight in, no parsing
 file_to_label = {
     "Obama": "Barack Obama",
-    "Trump": "Donald J. Trump",
+#     "Trump": "Donald J. Trump",
     "Eisenhower": "Dwight D. Eisenhower",
     "Roosevelt": "Franklin D. Roosevelt",
     "Bush": "George Bush",
@@ -60,8 +60,8 @@ file_to_label = {
     "Carter": "Jimmy Carter",
     "Kennedy": "John F. Kennedy",
     "Johnson": "Lyndon B. Johnson",
-    "Nixon": "Richard Nixon",
-    "Reagan": "Ronald Reagan",
+#     "Nixon": "Richard Nixon",
+#     "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -173,7 +173,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 50
+max_seq_len = 25
 
 # create new speech/label holders
 split_text = []
@@ -181,7 +181,7 @@ split_labels = []
 
 for idx in range(0, len(tokenized_text)):
     current_label = idx
-    current_speech = tokenized_text[idx]#[:label_min_chars]
+    current_speech = tokenized_text[idx][:label_min_chars]
     current_splits = splits(current_speech, max_seq_len)
     split_text.extend(current_splits)
     split_labels.extend([current_label] * len(current_splits))
@@ -263,7 +263,16 @@ test_X = np.reshape(test_X,(test_X.shape[0],max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[11]:
+# In[ ]:
+
+test_X = np.split(test_X,[57900])[0]
+test_y = np.split(test_y,[57900])[0]
+train_X = np.split(train_X,[231600])[0]
+train_y = np.split(train_y,[231600])[0]
+print test_X.shape, train_X.shape
+
+
+# In[ ]:
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -289,10 +298,10 @@ def ReSQRT(x):
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[12]:
+# In[ ]:
 
 from keras.models import Model
-from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM
+from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM, TimeDistributed
 from keras.optimizers import Adagrad, adam
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
 
@@ -310,8 +319,8 @@ csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
 
 # assemble & compile model
 print('Build model...')
-main_input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=100,activation='relu'))(main_input)
+main_input = Input(batch_shape=(batch_size,max_seq_len,unique_chars)) #shape=(max_seq_len,unique_chars,))
+rnn = Bidirectional(SimpleRNN(units=200,activation='relu',stateful=True))(main_input)
 drop = Dropout(0.5)(rnn)
 main_output = Dense(len(labels),activation='softmax')(rnn)
 model = Model(inputs=[main_input], outputs=[main_output])
@@ -326,6 +335,7 @@ model.fit([np.array(train_X)],
           [np.array(train_y)],
           batch_size=batch_size,
           epochs=epochs,
+          shuffle=True,
           class_weight = y_weights,
           callbacks=[reduce_lr, csv_logger],
           verbose=1)
@@ -334,7 +344,7 @@ model.save('Keras_BagnallCharacterRNN_training.h5')
 del model
 
 
-# In[13]:
+# In[ ]:
 
 # Load computed model
 from keras.models import load_model
@@ -343,7 +353,7 @@ from keras.models import load_model
 model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
-# In[14]:
+# In[ ]:
 
 # Evaluate performance
 print "Evaluating test data..."
@@ -360,7 +370,7 @@ test_y_collapsed = np.argmax(test_y, axis=1)
 print "Done prediction."
 
 
-# In[15]:
+# In[ ]:
 
 # Plot confusion matrix
 #   from scikit-learn examples @
