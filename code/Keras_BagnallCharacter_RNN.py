@@ -16,7 +16,7 @@ set_random_seed(2)
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
-# In[7]:
+# In[3]:
 
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
@@ -54,7 +54,7 @@ file_to_label = {
     "Roosevelt": "Franklin D. Roosevelt",
     "Bush": "George Bush",
     "WBush": "George W. Bush",
-    "Ford": "Gerald R. Ford",
+#     "Ford": "Gerald R. Ford",
     "Truman": "Harry S. Truman",
 #     "Hoover": "Herbert Hoover",
     "Carter": "Jimmy Carter",
@@ -87,7 +87,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[8]:
+# In[4]:
 
 #
 # Bagnall 2015 text pre-processing
@@ -111,7 +111,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[9]:
+# In[5]:
 
 #
 # Join all speeches into one massive per president
@@ -159,7 +159,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[ ]:
+# In[7]:
 
 #
 # Split speeches into subsequences 
@@ -173,7 +173,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 50
+max_seq_len = 25
 
 # create new speech/label holders
 split_text = []
@@ -190,7 +190,7 @@ print "Sample splits, labels:", len( split_text ), len( split_labels )
 print "\nOriginal total chars:", len( split_text ) * max_seq_len
 
 
-# In[ ]:
+# In[8]:
 
 #
 # split amongst speaker samples, not the whole population of samples
@@ -215,7 +215,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[ ]:
+# In[9]:
 
 #
 # Prep test/train
@@ -239,7 +239,7 @@ train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
 
 
-# In[ ]:
+# In[10]:
 
 #
 # One-hot encoding samples
@@ -263,20 +263,20 @@ test_X = np.reshape(test_X,(test_X.shape[0],max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[ ]:
+# In[11]:
 
-max_test = test_X.shape[0] - (test_X.shape[0]%100)
-test_X = np.split(test_X,[max_test])[0]
-test_y = np.split(test_y,[max_test])[0]
+# max_test = test_X.shape[0] - (test_X.shape[0]%100)
+# test_X = np.split(test_X,[max_test])[0]
+# test_y = np.split(test_y,[max_test])[0]
 
-max_train = train_X.shape[0] - (train_X.shape[0]%100)
-train_X = np.split(train_X,[max_train])[0]
-train_y = np.split(train_y,[max_train])[0]
+# max_train = train_X.shape[0] - (train_X.shape[0]%100)
+# train_X = np.split(train_X,[max_train])[0]
+# train_y = np.split(train_y,[max_train])[0]
 
-print test_X.shape, train_X.shape
+# print test_X.shape, train_X.shape
 
 
-# In[ ]:
+# In[12]:
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -302,7 +302,7 @@ def ReSQRT(x):
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[ ]:
+# In[13]:
 
 from keras.models import Model
 from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM, TimeDistributed
@@ -323,8 +323,8 @@ csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
 
 # assemble & compile model
 print('Build model...')
-main_input = Input(batch_shape=(batch_size,max_seq_len,unique_chars)) #shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=150,activation='relu',stateful=True))(main_input)
+main_input = Input(shape=(max_seq_len,unique_chars,))# batch_shape=(batch_size,max_seq_len,unique_chars)) #
+rnn = Bidirectional(SimpleRNN(units=100,activation='relu'))(main_input) #,stateful=True
 drop = Dropout(0.5)(rnn)
 main_output = Dense(len(labels),activation='softmax')(rnn)
 model = Model(inputs=[main_input], outputs=[main_output])
