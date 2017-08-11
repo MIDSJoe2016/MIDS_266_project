@@ -19,9 +19,9 @@ def get_data(sentence_max_threshold = 15000):
               "Franklin D. Roosevelt",
               "George Bush",
               "George W. Bush",
-    #          "Gerald R. Ford",
+              "Gerald R. Ford",
               "Harry S. Truman",
-    #          "Herbert Hoover",
+              "Herbert Hoover",
               "Jimmy Carter",
               "John F. Kennedy",
               "Lyndon B. Johnson",
@@ -31,24 +31,6 @@ def get_data(sentence_max_threshold = 15000):
     labels = {}
     for idx, name in enumerate(presidents):
         labels[name] = idx
-    '''
-    labels = {"Barack Obama": 0,
-              "Donald J. Trump": 1,
-              "Dwight D. Eisenhower": 2,
-              "Franklin D. Roosevelt": 3,
-              "George Bush": 4,
-              "George W. Bush": 5,
-              "Gerald R. Ford": 6,
-              "Harry S. Truman": 7,
-              "Herbert Hoover": 8,
-              "Jimmy Carter": 9,
-              "John F. Kennedy": 10,
-              "Lyndon B. Johnson": 11,
-              "Richard Nixon": 12,
-              "Ronald Reagan": 13,
-              "William J. Clinton": 14}
-
-    '''
 
     # load raw text files straight in, no parsing
     file_to_label = {"Obama": "Barack Obama", 
@@ -57,9 +39,9 @@ def get_data(sentence_max_threshold = 15000):
                          "Roosevelt": "Franklin D. Roosevelt",
                          "Bush": "George Bush",
                          "WBush": "George W. Bush",
-    #                     "Ford": "Gerald R. Ford",
+                         "Ford": "Gerald R. Ford",
                          "Truman": "Harry S. Truman",
-    #                     "Hoover": "Herbert Hoover",
+                         "Hoover": "Herbert Hoover",
                          "Carter": "Jimmy Carter",
                          "Kennedy": "John F. Kennedy",
                          "Johnson": "Lyndon B. Johnson",
