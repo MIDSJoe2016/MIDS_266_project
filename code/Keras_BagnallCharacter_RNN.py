@@ -3,6 +3,7 @@
 
 # In[1]:
 
+
 # Include so results on different machines are (should be) the same.
 from numpy.random import seed
 seed(1)
@@ -13,10 +14,12 @@ set_random_seed(2)
 
 # In[2]:
 
+
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
 # In[3]:
+
 
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
@@ -26,7 +29,7 @@ loaded_labels = []
 loaded_text = []
 presidents = [
     "Barack Obama",
-#     "Donald J. Trump",
+    "Donald J. Trump",
     "Dwight D. Eisenhower",
     "Franklin D. Roosevelt",
     "George Bush",
@@ -37,8 +40,8 @@ presidents = [
     "Jimmy Carter",
     "John F. Kennedy",
     "Lyndon B. Johnson",
-#     "Richard Nixon",
-#     "Ronald Reagan",
+    "Richard Nixon",
+    "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -49,7 +52,7 @@ for idx, name in enumerate(presidents):
 # load raw text files straight in, no parsing
 file_to_label = {
     "Obama": "Barack Obama",
-#     "Trump": "Donald J. Trump",
+    "Trump": "Donald J. Trump",
     "Eisenhower": "Dwight D. Eisenhower",
     "Roosevelt": "Franklin D. Roosevelt",
     "Bush": "George Bush",
@@ -60,8 +63,8 @@ file_to_label = {
     "Carter": "Jimmy Carter",
     "Kennedy": "John F. Kennedy",
     "Johnson": "Lyndon B. Johnson",
-#     "Nixon": "Richard Nixon",
-#     "Reagan": "Ronald Reagan",
+    "Nixon": "Richard Nixon",
+    "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -89,6 +92,7 @@ print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "pres
 
 # In[4]:
 
+
 #
 # Bagnall 2015 text pre-processing
 #
@@ -112,6 +116,7 @@ print "Replacements complete."
 
 
 # In[5]:
+
 
 #
 # Join all speeches into one massive per president
@@ -140,6 +145,7 @@ print label_min_chars
 
 # In[6]:
 
+
 #
 # Tokenize words into chars
 #
@@ -160,6 +166,7 @@ print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
 # In[7]:
+
 
 #
 # Split speeches into subsequences 
@@ -192,6 +199,7 @@ print "\nOriginal total chars:", len( split_text ) * max_seq_len
 
 # In[8]:
 
+
 #
 # split amongst speaker samples, not the whole population of samples
 #
@@ -215,7 +223,8 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[9]:
+# In[17]:
+
 
 #
 # Prep test/train
@@ -226,6 +235,7 @@ from sklearn.utils import class_weight
 
 # compute class weights to account for imbalanced classes
 y_weights = (class_weight.compute_class_weight('balanced', np.unique(split_labels), split_labels)).tolist()
+y_weights = dict(zip(labels.values(), y_weights))
 print "Class weights:\n", y_weights
 
 # split data smartly
@@ -240,6 +250,7 @@ test_y = to_categorical(test_y)
 
 
 # In[10]:
+
 
 #
 # One-hot encoding samples
@@ -265,6 +276,7 @@ print "...and reshaping to ", test_X.shape
 
 # In[11]:
 
+
 # max_test = test_X.shape[0] - (test_X.shape[0]%100)
 # test_X = np.split(test_X,[max_test])[0]
 # test_y = np.split(test_y,[max_test])[0]
@@ -277,6 +289,7 @@ print "...and reshaping to ", test_X.shape
 
 
 # In[12]:
+
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -303,6 +316,7 @@ def ReSQRT(x):
 # | initialisation                  	| gaussian, zero                     	|
 
 # In[13]:
+
 
 from keras.models import Model
 from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM, TimeDistributed
@@ -350,6 +364,7 @@ del model
 
 # In[ ]:
 
+
 # Load computed model
 from keras.models import load_model
 # returns a compiled model
@@ -358,6 +373,7 @@ model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
 # In[ ]:
+
 
 # Evaluate performance
 print "Evaluating test data..."
@@ -375,6 +391,7 @@ print "Done prediction."
 
 
 # In[ ]:
+
 
 # Plot confusion matrix
 #   from scikit-learn examples @
@@ -436,6 +453,7 @@ plt.show()
 
 
 # In[ ]:
+
 
 
 
