@@ -13,7 +13,7 @@ set_random_seed(2)
 
 # In[2]:
 
-get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
+get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_SimpleRNN.ipynb')
 
 
 # In[3]:
@@ -188,8 +188,8 @@ for idx in range(0, len(tokenized_text)):
     split_text.extend(current_splits)
     split_labels.extend([current_label] * len(current_splits))
 
-print "Sample splits, labels:", len( split_text ), len( split_labels )
-print "\nOriginal total chars:", len( split_text ) * max_seq_len
+print "Subsequence total count; subsequence label total count:", len( split_text ), len( split_labels )
+print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
 # In[8]:
@@ -292,61 +292,6 @@ def ReSQRT(x):
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[12]:
-
-from keras.models import Model
-from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM, TimeDistributed
-from keras.optimizers import Adagrad, adam
-from keras.callbacks import ReduceLROnPlateau, CSVLogger
-from keras.utils import plot_model
-
-# define operating vars
-batch_size = 100
-epochs = 100
-
-# define optimizer
-optimizer = Adagrad(lr=0.01)
-
-# define any callbacks
-reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
-              patience=1, verbose=1)
-csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
-
-
-#### 
-# start by checking Bagnall code
-#  https://stackoverflow.com/questions/42384602/implementing-skip-connections-in-keras
-#  https://github.com/fchollet/keras/issues/4126
-#  https://keras.io/getting-started/functional-api-guide/#multi-input-and-multi-output-models
-
-# assemble & compile model
-print('Build model...')
-main_input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=100,activation="relu"))(main_input)
-# drop = Dropout(0.5)(rnn)
-main_output = Dense(len(labels),activation='softmax')(rnn)
-model = Model(inputs=[main_input], outputs=[main_output])
-
-model.compile(loss='categorical_crossentropy', 
-              optimizer=optimizer, 
-              metrics=['categorical_accuracy'])
-plot_model(model, to_file='Keras_BagnallCharacter_RNN.png', show_shapes=True, show_layer_names=True)
-print(model.summary())
-
-# train
-model.fit([np.array(train_X)],
-          [np.array(train_y)],
-          batch_size=batch_size,
-          epochs=epochs,
-          shuffle=True,
-          class_weight = y_weights,
-          callbacks=[reduce_lr, csv_logger],
-          verbose=1)
-
-model.save('Keras_BagnallCharacterRNN_training.h5')  
-del model
-
-
 # In[ ]:
 
 ##
@@ -368,7 +313,7 @@ optimizer = Adagrad(lr=0.01)
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
               patience=1, verbose=1)
-csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
+csv_logger = CSVLogger('Keras_BagnallCharacter_SimpleRNN.log')
 
 # assemble & compile model
 print('Build model...')
@@ -381,7 +326,7 @@ model = Model(inputs=[main_input], outputs=[main_output])
 model.compile(loss='categorical_crossentropy', 
               optimizer=optimizer, 
               metrics=['categorical_accuracy'])
-plot_model(model, to_file='Keras_BagnallCharacter_RNN.png', show_shapes=True, show_layer_names=True)
+plot_model(model, to_file='Keras_BagnallCharacter_SimpleRNN.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
 
@@ -395,7 +340,7 @@ model.fit([np.array(train_X)],
           callbacks=[reduce_lr, csv_logger],
           verbose=1)
 
-model.save('Keras_BagnallCharacterRNN_training.h5')  
+model.save('Keras_BagnallCharacter_SimpleRNN.h5')  
 del model
 
 
@@ -404,10 +349,10 @@ del model
 # Load computed model
 from keras.models import load_model
 # returns a compiled model identical to the one trained
-model = load_model('Keras_BagnallCharacterRNN_training.h5')
+model = load_model('Keras_BagnallCharacter_SimpleRNN.h5')
 
 
-# In[ ]:
+# In[13]:
 
 from sklearn import metrics
 
@@ -427,7 +372,7 @@ print "\n\nDone prediction."
 print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
 
 
-# In[ ]:
+# In[15]:
 
 # Plot confusion matrix
 #   from scikit-learn examples @
