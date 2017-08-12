@@ -3,7 +3,6 @@
 
 # In[1]:
 
-
 # Include so results on different machines are (should be) the same.
 from numpy.random import seed
 seed(1)
@@ -14,12 +13,10 @@ set_random_seed(2)
 
 # In[2]:
 
-
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_RNN.ipynb')
 
 
 # In[3]:
-
 
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
@@ -34,9 +31,9 @@ presidents = [
     "Franklin D. Roosevelt",
     "George Bush",
     "George W. Bush",
-#     "Gerald R. Ford",
+    "Gerald R. Ford",
     "Harry S. Truman",
-#     "Herbert Hoover",
+    "Herbert Hoover",
     "Jimmy Carter",
     "John F. Kennedy",
     "Lyndon B. Johnson",
@@ -57,9 +54,9 @@ file_to_label = {
     "Roosevelt": "Franklin D. Roosevelt",
     "Bush": "George Bush",
     "WBush": "George W. Bush",
-#     "Ford": "Gerald R. Ford",
+    "Ford": "Gerald R. Ford",
     "Truman": "Harry S. Truman",
-#     "Hoover": "Herbert Hoover",
+    "Hoover": "Herbert Hoover",
     "Carter": "Jimmy Carter",
     "Kennedy": "John F. Kennedy",
     "Johnson": "Lyndon B. Johnson",
@@ -92,7 +89,6 @@ print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "pres
 
 # In[4]:
 
-
 #
 # Bagnall 2015 text pre-processing
 #
@@ -105,8 +101,10 @@ trantab = maketrans(chars_to_replace, sub_chars)
 for x in range(0,len(loaded_text)):
     # "Various rare characters that seemed largely equivalent are mapped together..."
     loaded_text[x] = re.sub('`', '\'', loaded_text[x])
+    loaded_text[x] = re.sub('--', '-', loaded_text[x])
+    loaded_text[x] = re.sub('\n\n', '\n', loaded_text[x])
     # "...all digits in all languages are mapped to 7"
-    loaded_text[x] = re.sub('[0-9]', '7', loaded_text[x])
+    loaded_text[x] = re.sub('[0-9]+', '7', loaded_text[x])
     # "...any character with a frequency lower than 1 in 10,000 is discarded."
     loaded_text[x] = loaded_text[x].translate(trantab)
     # "Runs of whitespace are collapsed into a single space."
@@ -116,7 +114,6 @@ print "Replacements complete."
 
 
 # In[5]:
-
 
 #
 # Join all speeches into one massive per president
@@ -145,7 +142,6 @@ print label_min_chars
 
 # In[6]:
 
-
 #
 # Tokenize words into chars
 #
@@ -166,7 +162,6 @@ print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
 # In[7]:
-
 
 #
 # Split speeches into subsequences 
@@ -199,7 +194,6 @@ print "\nOriginal total chars:", len( split_text ) * max_seq_len
 
 # In[8]:
 
-
 #
 # split amongst speaker samples, not the whole population of samples
 #
@@ -223,8 +217,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[17]:
-
+# In[9]:
 
 #
 # Prep test/train
@@ -251,7 +244,6 @@ test_y = to_categorical(test_y)
 
 # In[10]:
 
-
 #
 # One-hot encoding samples
 #
@@ -275,21 +267,6 @@ print "...and reshaping to ", test_X.shape
 
 
 # In[11]:
-
-
-# max_test = test_X.shape[0] - (test_X.shape[0]%100)
-# test_X = np.split(test_X,[max_test])[0]
-# test_y = np.split(test_y,[max_test])[0]
-
-# max_train = train_X.shape[0] - (train_X.shape[0]%100)
-# train_X = np.split(train_X,[max_train])[0]
-# train_y = np.split(train_y,[max_train])[0]
-
-# print test_X.shape, train_X.shape
-
-
-# In[12]:
-
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -315,13 +292,13 @@ def ReSQRT(x):
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[13]:
-
+# In[12]:
 
 from keras.models import Model
 from keras.layers import Input, Dense, SimpleRNN, Dropout, Bidirectional, LSTM, TimeDistributed
 from keras.optimizers import Adagrad, adam
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
+from keras.utils import plot_model
 
 # define operating vars
 batch_size = 100
@@ -335,17 +312,25 @@ reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
               patience=1, verbose=1)
 csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
 
+
+#### 
+# start by checking Bagnall code
+#  https://stackoverflow.com/questions/42384602/implementing-skip-connections-in-keras
+#  https://github.com/fchollet/keras/issues/4126
+#  https://keras.io/getting-started/functional-api-guide/#multi-input-and-multi-output-models
+
 # assemble & compile model
 print('Build model...')
-main_input = Input(shape=(max_seq_len,unique_chars,))# batch_shape=(batch_size,max_seq_len,unique_chars)) #
-rnn = Bidirectional(SimpleRNN(units=100,activation='relu'))(main_input) #,stateful=True
-drop = Dropout(0.5)(rnn)
+main_input = Input(shape=(max_seq_len,unique_chars,))
+rnn = Bidirectional(SimpleRNN(units=100,activation="relu"))(main_input)
+# drop = Dropout(0.5)(rnn)
 main_output = Dense(len(labels),activation='softmax')(rnn)
 model = Model(inputs=[main_input], outputs=[main_output])
 
 model.compile(loss='categorical_crossentropy', 
               optimizer=optimizer, 
               metrics=['categorical_accuracy'])
+plot_model(model, to_file='Keras_BagnallCharacter_RNN.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
 # train
@@ -364,16 +349,67 @@ del model
 
 # In[ ]:
 
+##
+## BASELINE
+##
+from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
+from keras.callbacks import ReduceLROnPlateau, CSVLogger
+from keras.optimizers import Adagrad
+from keras.models import Model
+from keras.utils import plot_model
+
+# define operating vars
+batch_size = 100
+epochs = 100
+
+# define optimizer
+optimizer = Adagrad(lr=0.01)
+
+# define any callbacks
+reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
+              patience=1, verbose=1)
+csv_logger = CSVLogger('Keras_BagnallCharacterRNN_training.log')
+
+# assemble & compile model
+print('Build model...')
+main_input = Input(shape=(max_seq_len,unique_chars,))
+rnn = Bidirectional(SimpleRNN(units=100,activation="relu"))
+# drop = Dropout(0.5)(rnn)
+main_output = Dense(len(labels),activation='softmax')(rnn)
+model = Model(inputs=[main_input], outputs=[main_output])
+
+model.compile(loss='categorical_crossentropy', 
+              optimizer=optimizer, 
+              metrics=['categorical_accuracy'])
+plot_model(model, to_file='Keras_BagnallCharacter_RNN.png', show_shapes=True, show_layer_names=True)
+print(model.summary())
+
+
+# train
+model.fit([np.array(train_X)],
+          [np.array(train_y)],
+          batch_size=batch_size,
+          epochs=epochs,
+          shuffle=True,
+          class_weight = y_weights,
+          callbacks=[reduce_lr, csv_logger],
+          verbose=1)
+
+model.save('Keras_BagnallCharacterRNN_training.h5')  
+del model
+
+
+# In[ ]:
 
 # Load computed model
 from keras.models import load_model
-# returns a compiled model
-# identical to the previous one
+# returns a compiled model identical to the one trained
 model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
 # In[ ]:
 
+from sklearn import metrics
 
 # Evaluate performance
 print "Evaluating test data..."
@@ -386,12 +422,12 @@ print "\nPredicting using test data..."
 pred_y = model.predict(test_X, batch_size=batch_size, verbose=1)
 pred_y_collapsed = np.argmax(pred_y, axis=1)
 test_y_collapsed = np.argmax(test_y, axis=1)
+print "\n\nDone prediction."
 
-print "Done prediction."
+print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
 
 
 # In[ ]:
-
 
 # Plot confusion matrix
 #   from scikit-learn examples @
@@ -453,7 +489,6 @@ plt.show()
 
 
 # In[ ]:
-
 
 
 
