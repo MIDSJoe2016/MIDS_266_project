@@ -1,28 +1,24 @@
 
 # coding: utf-8
 
-# In[97]:
+# In[1]:
 
 
 # Include so results on different machines are (should be) the same.
-import numpy as np
 from numpy.random import seed
 seed(1)
 
 from tensorflow import set_random_seed
 set_random_seed(2)
 
-import random as rn
-rn.seed(3)
+
+# In[2]:
 
 
-# In[98]:
+get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_MultiHeadRNN.ipynb')
 
 
-get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_SimpleRNN.ipynb')
-
-
-# In[99]:
+# In[3]:
 
 
 import glob, os, json, re, unicodedata
@@ -94,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[100]:
+# In[4]:
 
 
 #
@@ -121,14 +117,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[101]:
-
-
-# Have a look at a scrubbed text excerpt
-print loaded_text[10][:750]
-
-
-# In[102]:
+# In[5]:
 
 
 #
@@ -156,7 +145,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[103]:
+# In[6]:
 
 
 #
@@ -178,7 +167,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[146]:
+# In[7]:
 
 
 #
@@ -210,23 +199,13 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[147]:
-
-
-# Have a look at a few split text excerpts
-print split_text[10:15]
-print split_labels[10:15]
-
-
-# In[148]:
+# In[8]:
 
 
 #
-# split amongst speaker samples, not the whole population of samples; shuffle if requested
+# split amongst speaker samples, not the whole population of samples
 #
-import sklearn.utils
-
-def split_test_train(input_text, input_labels, labels, train_pct=0.8, shuffle_p=True):
+def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     train_text = []
     train_labels = []
     test_text = []
@@ -236,50 +215,43 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8, shuffle_p=
         # grab all values of a specific label
         subset_text = list(itemgetter(*[idx for idx, label in enumerate(input_labels) if label == value ])(input_text))
         subset_labels = list(itemgetter(*[idx for idx, label in enumerate(input_labels) if label == value ])(input_labels))
-
+        
         cut_pos = int(train_pct * len(subset_text))
         train_text = train_text + subset_text[:cut_pos]
         train_labels = train_labels + subset_labels[:cut_pos]
         test_text = test_text + subset_text[cut_pos:]
         test_labels = test_labels + subset_labels[cut_pos:]
-
-    if shuffle_p:
-        test_text, test_labels = sklearn.utils.shuffle(test_text, test_labels)
-        train_text, train_labels = sklearn.utils.shuffle(train_text, train_labels)
-
-    return train_text, train_labels, test_text, test_labels
+        
+    return train_text,train_labels,test_text,test_labels
 
 
-# In[153]:
+# In[9]:
 
 
 #
 # Prep test/train
 #
 from sklearn.preprocessing import OneHotEncoder
+from keras.utils import to_categorical
 from sklearn.utils import class_weight
+
+# compute class weights to account for imbalanced classes
+y_weights = (class_weight.compute_class_weight('balanced', np.unique(split_labels), split_labels)).tolist()
+y_weights = dict(zip(labels.values(), y_weights))
+print "Class weights:\n", y_weights
 
 # split data smartly
 train_X, train_y, test_X, test_y = split_test_train(split_text, split_labels, 
-                                                    labels, train_pct=0.8, shuffle_p=False)
-print "Sample splits:\n Test = ", len(train_X), "\n Train = ", len(test_X)##
+                                                    labels, train_pct=0.8)
 
-# compute class weights to account for imbalanced classes
-y_weights = (class_weight.compute_class_weight('balanced', np.unique(train_y), train_y)).tolist()
-y_weights = dict(zip(sorted(labels.values()), y_weights))
-print "\nClass weights:\n", y_weights
+print "Splits:\n Test = ", len(train_X), "\n Train = ", len(test_X)
 
-
-# In[154]:
+# one-hot encode classes
+train_y = to_categorical(train_y)
+test_y = to_categorical(test_y)
 
 
-# Have a look at a few of the split text excerpts; 
-# likely the same classes based on the split point
-print train_X[10:15]
-print train_y[10:15]
-
-
-# In[155]:
+# In[10]:
 
 
 #
@@ -309,16 +281,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[156]:
-
-
-# Have a again look at a few of the split and encoded text excerpts; 
-# both arrays should be one-hot encoded.
-print train_X[10:11]
-print train_y[10:11]
-
-
-# In[157]:
+# In[11]:
 
 
 # custom activation from Bagnall 2015
@@ -328,7 +291,8 @@ from keras.utils.generic_utils import get_custom_objects
 
 def ReSQRT(x):
     cond = tf.less_equal(x, 0.0)
-    return tf.where(cond, x * 0.0, tf.sqrt(x+1)-1)
+    result = tf.where(cond, x * 0.0, tf.sqrt(x+1)-1)
+    return result
 
 get_custom_objects().update({'ReSQRT': ReSQRT})
 
@@ -347,24 +311,30 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[161]:
+# In[13]:
+
+
+#### 
+#  https://stackoverflow.com/questions/42384602/implementing-skip-connections-in-keras
+#  https://github.com/fchollet/keras/issues/4126
+#  https://keras.io/getting-started/functional-api-guide/#multi-input-and-multi-output-models
 
 
 ##
-## BASELINE
+## BASELINE + multi softmax
 ##
 from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
-from keras.optimizers import Adagrad, adam
+from keras.optimizers import Adagrad
 from keras.models import Model
 from keras.utils import plot_model
 
 # define operating vars
-batch_size = 50
+batch_size = 100
 epochs = 100
 
 # define optimizer
-optimizer = Adagrad(lr=0.001)
+optimizer = Adagrad(lr=0.01, clipnorm=1.0)
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
@@ -374,8 +344,8 @@ csv_logger = CSVLogger('Keras_BagnallCharacter_SimpleRNN.log')
 # assemble & compile model
 main_input = Input(shape=(max_seq_len,unique_chars,))
 rnn = Bidirectional(SimpleRNN(units=100,activation="relu"))(main_input)
-drop = Dropout(0.2)(rnn)
-main_output = Dense(len(labels),activation='softmax',kernel_initializer='random_uniform')(drop)
+#drop = Dropout(0.2)(rnn)
+main_output = Dense(len(labels),activation='softmax',kernel_initializer='random_uniform')(rnn)
 model = Model(inputs=[main_input], outputs=[main_output])
 
 model.compile(loss='categorical_crossentropy', 
@@ -405,7 +375,7 @@ del model
 # Load computed model
 from keras.models import load_model
 # returns a compiled model identical to the one trained
-model = load_model('Keras_BagnallCharacter_SimpleRNN.h5')
+model = load_model('Keras_BagnallCharacterRNN_training.h5')
 
 
 # In[ ]:
