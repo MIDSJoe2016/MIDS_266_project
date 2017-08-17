@@ -109,6 +109,9 @@ def get_data(sentence_max_threshold = 15000):
         speech = loaded_text[idx]
         label = loaded_labels[idx]
         parsed_sentences = sent_detector.tokenize(speech.strip())
+        # remove very short sentences
+        parsed_sentences = [x for x in parsed_sentences if len(x) > 4]
+
         input_text = input_text + parsed_sentences
         input_labels = input_labels + ([label]*len(parsed_sentences))
 
@@ -124,11 +127,13 @@ def get_data(sentence_max_threshold = 15000):
 
     max_sentence_len_char = len(max(input_text, key=len))
     max_sentence_len_word = len(max(input_text, key=len).split())
+    min_sentence_len_word = len(min(input_text, key=len).split())
 
     print "\nMaximum sentence length (characters):", max_sentence_len_char
     print "Maximum sentence length (words):", max_sentence_len_word
+    print "Minimum sentence length (words):", min_sentence_len_word
+    print "\nShortest sentence:%s" % min(input_text, key=len)
     print "\nLongest sentence:", max(input_text, key=len)
-
 
     # approach here is too simplistic but it suffices for now:
     #   If <= threshold, take all; else just pick first threshold # of sentences sentences
