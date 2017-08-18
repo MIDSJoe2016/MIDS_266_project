@@ -1,8 +1,7 @@
 
 # coding: utf-8
 
-# In[45]:
-
+# In[21]:
 
 # Include so results on different machines are (should be) the same.
 from numpy.random import seed
@@ -12,14 +11,12 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[46]:
-
+# In[22]:
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_MultiHeadRNN.ipynb')
 
 
-# In[47]:
-
+# In[23]:
 
 import glob, os, json, re, unicodedata
 from bs4 import BeautifulSoup
@@ -90,8 +87,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[48]:
-
+# In[24]:
 
 #
 # Bagnall 2015 text pre-processing
@@ -117,8 +113,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[49]:
-
+# In[25]:
 
 #
 # Join all speeches into one massive per president
@@ -145,8 +140,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[50]:
-
+# In[26]:
 
 #
 # Tokenize words into chars
@@ -167,8 +161,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[51]:
-
+# In[53]:
 
 #
 # Split speeches into subsequences 
@@ -182,7 +175,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 50
+max_seq_len = 25
 
 # create new speech/label holders
 split_text = []
@@ -199,8 +192,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[52]:
-
+# In[54]:
 
 #
 # split amongst speaker samples, not the whole population of samples
@@ -225,8 +217,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[53]:
-
+# In[55]:
 
 #
 # Prep test/train
@@ -245,8 +236,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[54]:
-
+# In[56]:
 
 #
 # One-hot encoding classes & samples
@@ -275,8 +265,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[55]:
-
+# In[57]:
 
 # custom activation from Bagnall 2015
 #  we were never able to get this to work; either nan'ed or never converged
@@ -305,13 +294,13 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[71]:
-
+# In[ ]:
 
 ##
 ## BASELINE
 ##
 from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
+from keras.layers.merge import Maximum, Add, Concatenate
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
 from keras.layers.merge import Average, Maximum
 from keras.optimizers import Adagrad, adam
@@ -319,29 +308,30 @@ from keras.models import Model
 from keras.utils import plot_model
 
 # define operating vars
-activation = "relu"
-units = 50
-dropout = 0.2525429012036986
-batch_size = 1000#100
-epochs = 50
-optimizer='rmsprop'
-shuffle=True
+activation = "relu" #"ReSQRT" 
+units = 150# 50
+dropout = 0.7646166765488501
+batch_size = 50# 100
+epochs = 100
+optimizer='adamax'#'rmsprop'
+shuffle=True #False
 
 # define any callbacks
-reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
-              patience=1, verbose=1)
+reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1,
+              patience=2, verbose=1)
 csv_logger = CSVLogger('Keras_BagnallCharacter_MultiHeadRNN.log')
 
 # assemble & compile model
 input = Input(shape=(max_seq_len,unique_chars,))
 rnn = Bidirectional(SimpleRNN(units=units,activation=activation))(input)
 
-soft1_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
-soft2_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
-soft3_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
-soft4_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
+## not entirely sure this makes sense, but it does seem to work...
+soft_out = []
+for idx in range(0,len(labels)):
+    soft_out[idx] = Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
+final_out = Add()(soft_out)
 
-model = Model(inputs=[input], outputs=[soft1_out,soft2_out,soft3_out,soft4_out])
+model = Model(inputs=[input], outputs = final_out) 
 
 model.compile(loss='categorical_crossentropy', 
               optimizer=optimizer, 
@@ -349,30 +339,9 @@ model.compile(loss='categorical_crossentropy',
 plot_model(model, to_file='Keras_BagnallCharacter_MultiHeadRNN.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
-#https://groups.google.com/forum/#!topic/keras-users/cpXXz_qsCvA
-out_data1 = np.copy(train_y)
-# out_data1[:,1] = 0
-# out_data1[:,2] = 0
-# out_data1[:,3] = 0
-
-out_data2 = np.copy(train_y)
-# out_data2[:,0] = 0
-# out_data2[:,1] = 0
-# out_data2[:,2] = 0
-
-out_data3 = np.copy(train_y)
-# out_data3[:,0] = 0
-# out_data3[:,1] = 0
-# out_data3[:,3] = 0
-
-out_data4 = np.copy(train_y)
-# out_data4[:,0] = 0
-# out_data4[:,1] = 0
-# out_data4[:,2] = 0
-
 # train
 model.fit([np.array(train_X)],
-          [out_data1, out_data2, out_data3, out_data4],
+          [np.array(train_y)],
           batch_size=batch_size,
           epochs=epochs,
           shuffle=shuffle,
@@ -387,21 +356,19 @@ del model
 
 # In[ ]:
 
-
-# Load computed model
+### Load computed model
 from keras.models import load_model
 # returns a compiled model identical to the one trained
 model = load_model('Keras_BagnallCharacter_MultiHeadRNN.h5')
 
 
-# In[73]:
-
+# In[ ]:
 
 from sklearn import metrics
 
 # Evaluate performance
 print "Evaluating test data..."
-loss_and_metrics = model.evaluate(test_X, [test_y,test_y,test_y,test_y])
+loss_and_metrics = model.evaluate(test_X, test_y)
 print model.metrics_names
 print loss_and_metrics
 
@@ -416,7 +383,6 @@ print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
 
 
 # In[ ]:
-
 
 # Plot confusion matrix
 #   from scikit-learn examples @
@@ -478,7 +444,6 @@ plt.show()
 
 
 # In[ ]:
-
 
 
 
