@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[97]:
+# In[1]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -16,13 +16,13 @@ import random as rn
 rn.seed(3)
 
 
-# In[98]:
+# In[2]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_SimpleRNN.ipynb')
 
 
-# In[99]:
+# In[3]:
 
 
 import glob, os, json, re, unicodedata
@@ -94,7 +94,24 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[100]:
+# In[47]:
+
+
+from nltk import word_tokenize
+from nltk.util import ngrams
+from collections import Counter
+
+assess_text = loaded_text
+assess_text = ' '.join(assess_text)
+
+from nltk.tag import pos_tag
+tagged_sent = pos_tag(assess_text.split())
+propernouns = [word for word,pos in tagged_sent if pos == 'NNP']
+
+print Counter(propernouns).most_common()[:-500-1:-1]
+
+
+# In[4]:
 
 
 #
@@ -121,14 +138,14 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[101]:
+# In[5]:
 
 
 # Have a look at a scrubbed text excerpt
 print loaded_text[10][:750]
 
 
-# In[102]:
+# In[6]:
 
 
 #
@@ -156,7 +173,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[103]:
+# In[7]:
 
 
 #
@@ -178,7 +195,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[146]:
+# In[ ]:
 
 
 #
@@ -193,7 +210,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 25
+max_seq_len = 50
 
 # create new speech/label holders
 split_text = []
@@ -210,7 +227,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[147]:
+# In[ ]:
 
 
 # Have a look at a few split text excerpts
@@ -218,7 +235,7 @@ print split_text[10:15]
 print split_labels[10:15]
 
 
-# In[148]:
+# In[ ]:
 
 
 #
@@ -250,7 +267,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8, shuffle_p=
     return train_text, train_labels, test_text, test_labels
 
 
-# In[153]:
+# In[ ]:
 
 
 #
@@ -270,7 +287,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "\nClass weights:\n", y_weights
 
 
-# In[154]:
+# In[ ]:
 
 
 # Have a look at a few of the split text excerpts; 
@@ -279,7 +296,7 @@ print train_X[10:15]
 print train_y[10:15]
 
 
-# In[155]:
+# In[ ]:
 
 
 #
@@ -309,7 +326,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[156]:
+# In[ ]:
 
 
 # Have a again look at a few of the split and encoded text excerpts; 
@@ -318,7 +335,7 @@ print train_X[10:11]
 print train_y[10:11]
 
 
-# In[157]:
+# In[ ]:
 
 
 # custom activation from Bagnall 2015
@@ -347,7 +364,7 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[161]:
+# In[ ]:
 
 
 ##
@@ -360,11 +377,13 @@ from keras.models import Model
 from keras.utils import plot_model
 
 # define operating vars
+optimizer='rmsprop'
+dropout = 0.5422412690636627
+activation = "relu"
 batch_size = 50
-epochs = 100
-
-# define optimizer
-optimizer = Adagrad(lr=0.001)
+units = 50
+shuffle = True
+epochs = 50
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
@@ -373,8 +392,8 @@ csv_logger = CSVLogger('Keras_BagnallCharacter_SimpleRNN.log')
 
 # assemble & compile model
 main_input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=100,activation="relu"))(main_input)
-drop = Dropout(0.2)(rnn)
+rnn = Bidirectional(SimpleRNN(units=units,activation=activation))(main_input)
+drop = Dropout(dropout)(rnn)
 main_output = Dense(len(labels),activation='softmax',kernel_initializer='random_uniform')(drop)
 model = Model(inputs=[main_input], outputs=[main_output])
 
@@ -390,22 +409,24 @@ model.fit([np.array(train_X)],
           [np.array(train_y)],
           batch_size=batch_size,
           epochs=epochs,
-          shuffle=True,
+          shuffle=shuffle,
           class_weight = y_weights,
           callbacks=[reduce_lr, csv_logger],
           verbose=1)
 
-model.save('Keras_BagnallCharacter_SimpleRNN.h5')  
+model.save('Keras_BagnallCharacter_SimpleRNN.h5')
+print ("Model saved.")
 del model
 
 
-# In[ ]:
+# In[8]:
 
 
 # Load computed model
 from keras.models import load_model
 # returns a compiled model identical to the one trained
 model = load_model('Keras_BagnallCharacter_SimpleRNN.h5')
+print ("Model re-loaded.")
 
 
 # In[ ]:
@@ -494,5 +515,24 @@ plt.show()
 # In[ ]:
 
 
-
+count = 0
+def reverse_map(map):
+    return dict((v,k) for k,v in map.iteritems())
+token_word_map = reverse_map(tokenizer.word_index)
+president_map = reverse_map(labels)
+def to_words(a):
+    return " ".join([token_word_map[id] for id in a if id != 0])
+sample_size = 20
+def print_row(row):
+    print "".join(col.ljust(22) for col in row)
+print_row(["Predicted","Correct","Sentence"])
+print_row(["----------","----------","---------------"])
+sample = []
+for i in range(len(test_y_collapsed)):
+    if (pred_y_collapsed[i] != test_y_collapsed[i] and count < sample_size):
+        sample += [[president_map[pred_y_collapsed[i]], president_map[test_y_collapsed[i]], to_words(test_X[i])]]
+        count += 1
+        
+for row in sample:
+    print_row(row)
 

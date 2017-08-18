@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[45]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[2]:
+# In[46]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_BagnallCharacter_MultiHeadRNN.ipynb')
 
 
-# In[3]:
+# In[47]:
 
 
 import glob, os, json, re, unicodedata
@@ -30,18 +30,18 @@ loaded_text = []
 presidents = [
     "Barack Obama",
     "Donald J. Trump",
-    "Dwight D. Eisenhower",
-    "Franklin D. Roosevelt",
-    "George Bush",
+#     "Dwight D. Eisenhower",
+#     "Franklin D. Roosevelt",
+#     "George Bush",
     "George W. Bush",
-    "Gerald R. Ford",
-    "Harry S. Truman",
-    "Herbert Hoover",
-    "Jimmy Carter",
-    "John F. Kennedy",
-    "Lyndon B. Johnson",
-    "Richard Nixon",
-    "Ronald Reagan",
+#     "Gerald R. Ford",
+#     "Harry S. Truman",
+#     "Herbert Hoover",
+#     "Jimmy Carter",
+#     "John F. Kennedy",
+#     "Lyndon B. Johnson",
+#     "Richard Nixon",
+#     "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -53,18 +53,18 @@ for idx, name in enumerate(presidents):
 file_to_label = {
     "Obama": "Barack Obama",
     "Trump": "Donald J. Trump",
-    "Eisenhower": "Dwight D. Eisenhower",
-    "Roosevelt": "Franklin D. Roosevelt",
-    "Bush": "George Bush",
+#     "Eisenhower": "Dwight D. Eisenhower",
+#     "Roosevelt": "Franklin D. Roosevelt",
+#     "Bush": "George Bush",
     "WBush": "George W. Bush",
-    "Ford": "Gerald R. Ford",
-    "Truman": "Harry S. Truman",
-    "Hoover": "Herbert Hoover",
-    "Carter": "Jimmy Carter",
-    "Kennedy": "John F. Kennedy",
-    "Johnson": "Lyndon B. Johnson",
-    "Nixon": "Richard Nixon",
-    "Reagan": "Ronald Reagan",
+#     "Ford": "Gerald R. Ford",
+#     "Truman": "Harry S. Truman",
+#     "Hoover": "Herbert Hoover",
+#     "Carter": "Jimmy Carter",
+#     "Kennedy": "John F. Kennedy",
+#     "Johnson": "Lyndon B. Johnson",
+#     "Nixon": "Richard Nixon",
+#     "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -90,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[4]:
+# In[48]:
 
 
 #
@@ -117,7 +117,7 @@ for x in range(0,len(loaded_text)):
 print "Replacements complete."
 
 
-# In[5]:
+# In[49]:
 
 
 #
@@ -145,7 +145,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[6]:
+# In[50]:
 
 
 #
@@ -167,7 +167,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[7]:
+# In[51]:
 
 
 #
@@ -182,7 +182,7 @@ def splits(_list, _split_size):
             output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 25
+max_seq_len = 50
 
 # create new speech/label holders
 split_text = []
@@ -199,7 +199,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[8]:
+# In[52]:
 
 
 #
@@ -225,33 +225,27 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[9]:
+# In[53]:
 
 
 #
 # Prep test/train
 #
 from sklearn.preprocessing import OneHotEncoder
-from keras.utils import to_categorical
 from sklearn.utils import class_weight
-
-# compute class weights to account for imbalanced classes
-y_weights = (class_weight.compute_class_weight('balanced', np.unique(split_labels), split_labels)).tolist()
-y_weights = dict(zip(labels.values(), y_weights))
-print "Class weights:\n", y_weights
 
 # split data smartly
 train_X, train_y, test_X, test_y = split_test_train(split_text, split_labels, 
                                                     labels, train_pct=0.8)
+print "Splits:\n Test = ", len(train_X), "\n Train = ", len(test_X)##
 
-print "Splits:\n Test = ", len(train_X), "\n Train = ", len(test_X)
+# compute class weights to account for imbalanced classes
+y_weights = (class_weight.compute_class_weight('balanced', np.unique(train_y), train_y)).tolist()
+y_weights = dict(zip(sorted(labels.values()), y_weights))
+print "Class weights:\n", y_weights
 
-# one-hot encode classes
-train_y = to_categorical(train_y)
-test_y = to_categorical(test_y)
 
-
-# In[10]:
+# In[54]:
 
 
 #
@@ -260,8 +254,8 @@ test_y = to_categorical(test_y)
 from keras.utils import to_categorical
 
 # one-hot encode classes
-train_y = to_categorical(train_y)
-test_y = to_categorical(test_y)
+train_y = np.array(to_categorical(train_y))
+test_y = np.array(to_categorical(test_y))
 
 # one-hot encode samples
 train_X = np.array(train_X)
@@ -281,7 +275,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[11]:
+# In[55]:
 
 
 # custom activation from Bagnall 2015
@@ -311,61 +305,83 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[13]:
-
-
-#### 
-#  https://stackoverflow.com/questions/42384602/implementing-skip-connections-in-keras
-#  https://github.com/fchollet/keras/issues/4126
-#  https://keras.io/getting-started/functional-api-guide/#multi-input-and-multi-output-models
+# In[71]:
 
 
 ##
-## BASELINE + multi softmax
+## BASELINE
 ##
 from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
-from keras.optimizers import Adagrad
+from keras.layers.merge import Average, Maximum
+from keras.optimizers import Adagrad, adam
 from keras.models import Model
 from keras.utils import plot_model
 
 # define operating vars
-batch_size = 100
-epochs = 100
-
-# define optimizer
-optimizer = Adagrad(lr=0.01, clipnorm=1.0)
+activation = "relu"
+units = 50
+dropout = 0.2525429012036986
+batch_size = 1000#100
+epochs = 50
+optimizer='rmsprop'
+shuffle=True
 
 # define any callbacks
-reduce_lr = ReduceLROnPlateau(monitor='categorical_accuracy', factor=0.5,
+reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
               patience=1, verbose=1)
-csv_logger = CSVLogger('Keras_BagnallCharacter_SimpleRNN.log')
+csv_logger = CSVLogger('Keras_BagnallCharacter_MultiHeadRNN.log')
 
 # assemble & compile model
-main_input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=100,activation="relu"))(main_input)
-#drop = Dropout(0.2)(rnn)
-main_output = Dense(len(labels),activation='softmax',kernel_initializer='random_uniform')(rnn)
-model = Model(inputs=[main_input], outputs=[main_output])
+input = Input(shape=(max_seq_len,unique_chars,))
+rnn = Bidirectional(SimpleRNN(units=units,activation=activation))(input)
+
+soft1_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
+soft2_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
+soft3_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
+soft4_out =  Dense(4,activation='softmax',kernel_initializer='random_uniform')(rnn)
+
+model = Model(inputs=[input], outputs=[soft1_out,soft2_out,soft3_out,soft4_out])
 
 model.compile(loss='categorical_crossentropy', 
               optimizer=optimizer, 
               metrics=['categorical_accuracy'])
-plot_model(model, to_file='Keras_BagnallCharacter_SimpleRNN.png', show_shapes=True, show_layer_names=True)
+plot_model(model, to_file='Keras_BagnallCharacter_MultiHeadRNN.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
+#https://groups.google.com/forum/#!topic/keras-users/cpXXz_qsCvA
+out_data1 = np.copy(train_y)
+# out_data1[:,1] = 0
+# out_data1[:,2] = 0
+# out_data1[:,3] = 0
+
+out_data2 = np.copy(train_y)
+# out_data2[:,0] = 0
+# out_data2[:,1] = 0
+# out_data2[:,2] = 0
+
+out_data3 = np.copy(train_y)
+# out_data3[:,0] = 0
+# out_data3[:,1] = 0
+# out_data3[:,3] = 0
+
+out_data4 = np.copy(train_y)
+# out_data4[:,0] = 0
+# out_data4[:,1] = 0
+# out_data4[:,2] = 0
 
 # train
 model.fit([np.array(train_X)],
-          [np.array(train_y)],
+          [out_data1, out_data2, out_data3, out_data4],
           batch_size=batch_size,
           epochs=epochs,
-          shuffle=True,
+          shuffle=shuffle,
           class_weight = y_weights,
           callbacks=[reduce_lr, csv_logger],
           verbose=1)
 
-model.save('Keras_BagnallCharacter_SimpleRNN.h5')  
+model.save('Keras_BagnallCharacter_MultiHeadRNN.h5')
+print ("Model saved.")
 del model
 
 
@@ -375,17 +391,17 @@ del model
 # Load computed model
 from keras.models import load_model
 # returns a compiled model identical to the one trained
-model = load_model('Keras_BagnallCharacterRNN_training.h5')
+model = load_model('Keras_BagnallCharacter_MultiHeadRNN.h5')
 
 
-# In[ ]:
+# In[73]:
 
 
 from sklearn import metrics
 
 # Evaluate performance
 print "Evaluating test data..."
-loss_and_metrics = model.evaluate(test_X, test_y)
+loss_and_metrics = model.evaluate(test_X, [test_y,test_y,test_y,test_y])
 print model.metrics_names
 print loss_and_metrics
 
