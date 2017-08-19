@@ -18,7 +18,7 @@ set_random_seed(2)
 get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN.ipynb')
 
 
-# In[3]:
+# In[2]:
 
 
 import glob, os, json, re, unicodedata
@@ -30,18 +30,18 @@ loaded_text = []
 presidents = [
     "Barack Obama",
     "Donald J. Trump",
-#     "Dwight D. Eisenhower",
-#     "Franklin D. Roosevelt",
-#     "George Bush",
+    "Dwight D. Eisenhower",
+    "Franklin D. Roosevelt",
+    "George Bush",
     "George W. Bush",
-#     "Gerald R. Ford",
-#     "Harry S. Truman",
-#     "Herbert Hoover",
-#     "Jimmy Carter",
-#     "John F. Kennedy",
-#     "Lyndon B. Johnson",
-#     "Richard Nixon",
-#     "Ronald Reagan",
+    "Gerald R. Ford",
+    "Harry S. Truman",
+    "Herbert Hoover",
+    "Jimmy Carter",
+    "John F. Kennedy",
+    "Lyndon B. Johnson",
+    "Richard Nixon",
+    "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -53,18 +53,18 @@ for idx, name in enumerate(presidents):
 file_to_label = {
     "Obama": "Barack Obama",
     "Trump": "Donald J. Trump",
-#     "Eisenhower": "Dwight D. Eisenhower",
-#     "Roosevelt": "Franklin D. Roosevelt",
-#     "Bush": "George Bush",
+    "Eisenhower": "Dwight D. Eisenhower",
+    "Roosevelt": "Franklin D. Roosevelt",
+    "Bush": "George Bush",
     "WBush": "George W. Bush",
-#     "Ford": "Gerald R. Ford",
-#     "Truman": "Harry S. Truman",
-#     "Hoover": "Herbert Hoover",
-#     "Carter": "Jimmy Carter",
-#     "Kennedy": "John F. Kennedy",
-#     "Johnson": "Lyndon B. Johnson",
-#     "Nixon": "Richard Nixon",
-#     "Reagan": "Ronald Reagan",
+    "Ford": "Gerald R. Ford",
+    "Truman": "Harry S. Truman",
+    "Hoover": "Herbert Hoover",
+    "Carter": "Jimmy Carter",
+    "Kennedy": "John F. Kennedy",
+    "Johnson": "Lyndon B. Johnson",
+    "Nixon": "Richard Nixon",
+    "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -90,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[4]:
+# In[3]:
 
 
 #
@@ -117,10 +117,10 @@ for x in range(0,len(loaded_text)):
     # REPLACE WORD IN ALL CAPS with <space>; headers
     loaded_text[x] = re.sub('[A-Z]{2,}','', loaded_text[x])
 
-print "Replacements complete."
+print "Character clean-up complete."
 
 
-# In[5]:
+# In[4]:
 
 
 #
@@ -148,7 +148,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[ ]:
+# In[5]:
 
 
 #
@@ -170,7 +170,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[ ]:
+# In[6]:
 
 
 #
@@ -206,7 +206,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[ ]:
+# In[7]:
 
 
 #
@@ -232,7 +232,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[ ]:
+# In[8]:
 
 
 #
@@ -252,7 +252,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[ ]:
+# In[9]:
 
 
 #
@@ -282,7 +282,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[ ]:
+# In[10]:
 
 
 # custom activation from Bagnall 2015
@@ -318,7 +318,7 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 ##
 ## BASELINE
 ##
-from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
+from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout, TimeDistributed
 from keras.layers.merge import Maximum, Add, Concatenate
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
 from keras.layers.merge import Average, Maximum
@@ -347,7 +347,7 @@ rnn = Bidirectional(SimpleRNN(units=units,activation=activation))(input)
 ## not entirely sure this makes sense, but it does seem to work...
 soft_out = []
 for idx in range(0,len(labels)):
-    soft_out.append( Dense(len(labels),activation='softmax', kernel_initializer='random_normal')(rnn) )
+    soft_out.append(Dense(len(labels),activation='softmax', kernel_initializer='random_normal')(rnn))
 final_out = Add()(soft_out)
 
 model = Model(inputs=[input], outputs = final_out) 
@@ -358,7 +358,11 @@ model.compile(loss='categorical_crossentropy',
 plot_model(model, to_file='Keras_Character_MultiHeadRNN.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
-# train
+
+# In[ ]:
+
+
+# train the model
 model.fit([np.array(train_X)],
           [np.array(train_y)],
           batch_size=batch_size,
@@ -373,19 +377,22 @@ print ("Model saved.")
 del model
 
 
-# In[ ]:
+# In[11]:
 
 
 ### Load computed model
 from keras.models import load_model
 # returns a compiled model identical to the one trained
 model = load_model('Keras_Character_MultiHeadRNN.h5')
+print "Model loaded." 
 
 
-# In[ ]:
+# In[12]:
 
 
 from sklearn import metrics
+
+batch_size = 50# 100
 
 # Evaluate performance
 print "Evaluating test data..."
@@ -403,7 +410,7 @@ print "\n\nDone prediction."
 print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
 
 
-# In[ ]:
+# In[13]:
 
 
 # Plot confusion matrix
@@ -414,7 +421,8 @@ import itertools
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
-def plot_confusion_matrix(cm, classes,
+def plot_confusion_matrix(cm, 
+                          classes,
                           normalize=False,
                           title='Confusion matrix',
                           cmap=plt.cm.Blues):
@@ -431,12 +439,11 @@ def plot_confusion_matrix(cm, classes,
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-        print(np.sum(cm,axis=0))
+#         print("Normalized confusion matrix")
+#     else:
+#         print('Confusion matrix, without normalization')
 
-    print(cm)
+#     print(cm)
 
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
@@ -457,12 +464,48 @@ plt.figure(figsize=(10,10))
 plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
                       title='Confusion matrix, without normalization')
 
-#Plot normalized confusion matrix
-plt.figure(figsize=(10,10))
-plot_confusion_matrix(np.round(cnf_matrix,2), classes=(sorted(labels, key=labels.get)), normalize=True,
-                      title='Normalized confusion matrix')
-
 plt.show()
+
+
+# In[ ]:
+
+
+#Plot normalized confusion matrix
+cnf_matrix_pct = cnf_matrix *1.0
+cnf_matrix_pct = np.around(np.array([row*100.0/sum(row) for row in cnf_matrix_pct]), 2)
+
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix on accuracy percentage')
+plt.show()
+
+
+# In[14]:
+
+
+binwidth = .05
+pred_outs = pred_y/len(labels)
+plt.hist(pred_outs.max(axis=1),bins=np.arange(0.0, 1.0, 0.05))
+plt.title('Frequency of predicted max probability per sequence')
+plt.show()
+
+
+# In[15]:
+
+
+sample_idx = 20000
+print "Predicted President: ", np.argmax(labels[pred_y[sample_idx]])
+print "Actual President: ", np.argmax(labels[test_y[sample_idx]])
+print split_text[sample_idx-1:sample_idx+1]
+
+# print one sequence on either side of confused
+sample = split_text[sample_idx-1:sample_idx+1]
+sample = sum(sample, [])
+sample_txt = ""
+tokenizer_rev = {v: k for k, v in tokenizer.word_index.items()}
+for char in sample:
+    sample_txt += tokenizer_rev[char]
+print sample_txt
 
 
 # In[ ]:
