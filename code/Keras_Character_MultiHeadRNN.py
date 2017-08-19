@@ -30,18 +30,18 @@ loaded_text = []
 presidents = [
     "Barack Obama",
     "Donald J. Trump",
-    "Dwight D. Eisenhower",
-    "Franklin D. Roosevelt",
-    "George Bush",
+#     "Dwight D. Eisenhower",
+#     "Franklin D. Roosevelt",
+#     "George Bush",
     "George W. Bush",
-    "Gerald R. Ford",
-    "Harry S. Truman",
-    "Herbert Hoover",
-    "Jimmy Carter",
-    "John F. Kennedy",
-    "Lyndon B. Johnson",
-    "Richard Nixon",
-    "Ronald Reagan",
+#     "Gerald R. Ford",
+#     "Harry S. Truman",
+#     "Herbert Hoover",
+#     "Jimmy Carter",
+#     "John F. Kennedy",
+#     "Lyndon B. Johnson",
+#     "Richard Nixon",
+#     "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -53,18 +53,18 @@ for idx, name in enumerate(presidents):
 file_to_label = {
     "Obama": "Barack Obama",
     "Trump": "Donald J. Trump",
-    "Eisenhower": "Dwight D. Eisenhower",
-    "Roosevelt": "Franklin D. Roosevelt",
-    "Bush": "George Bush",
+#     "Eisenhower": "Dwight D. Eisenhower",
+#     "Roosevelt": "Franklin D. Roosevelt",
+#     "Bush": "George Bush",
     "WBush": "George W. Bush",
-    "Ford": "Gerald R. Ford",
-    "Truman": "Harry S. Truman",
-    "Hoover": "Herbert Hoover",
-    "Carter": "Jimmy Carter",
-    "Kennedy": "John F. Kennedy",
-    "Johnson": "Lyndon B. Johnson",
-    "Nixon": "Richard Nixon",
-    "Reagan": "Ronald Reagan",
+#     "Ford": "Gerald R. Ford",
+#     "Truman": "Harry S. Truman",
+#     "Hoover": "Herbert Hoover",
+#     "Carter": "Jimmy Carter",
+#     "Kennedy": "John F. Kennedy",
+#     "Johnson": "Lyndon B. Johnson",
+#     "Nixon": "Richard Nixon",
+#     "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -148,7 +148,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[6]:
+# In[ ]:
 
 
 #
@@ -170,7 +170,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[7]:
+# In[ ]:
 
 
 #
@@ -178,11 +178,15 @@ print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 #
 from collections import Counter
 
-def splits(_list, _split_size):
+def splits(_list, _split_size, window=False):
     output_list = []
-    for idx in range(0, len(_list), _split_size):
-        if (idx + _split_size) <= len(_list):
+    if (window):
+        for idx in range(0, len(_list)-_split_size):
             output_list.append(_list[idx:idx + _split_size])
+    else:
+        for idx in range(0, len(_list), _split_size):
+            if (idx + _split_size) <= len(_list):
+                output_list.append(_list[idx:idx + _split_size])
     return output_list
 
 max_seq_len = 25
@@ -202,7 +206,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[8]:
+# In[ ]:
 
 
 #
@@ -228,7 +232,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[9]:
+# In[ ]:
 
 
 #
@@ -248,7 +252,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[10]:
+# In[ ]:
 
 
 #
@@ -278,7 +282,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[11]:
+# In[ ]:
 
 
 # custom activation from Bagnall 2015
@@ -308,7 +312,7 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[13]:
+# In[ ]:
 
 
 ##
