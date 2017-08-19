@@ -30,18 +30,18 @@ loaded_text = []
 presidents = [
     "Barack Obama",
     "Donald J. Trump",
-    "Dwight D. Eisenhower",
-    "Franklin D. Roosevelt",
-    "George Bush",
+#     "Dwight D. Eisenhower",
+#     "Franklin D. Roosevelt",
+#     "George Bush",
     "George W. Bush",
-    "Gerald R. Ford",
-    "Harry S. Truman",
-    "Herbert Hoover",
-    "Jimmy Carter",
-    "John F. Kennedy",
-    "Lyndon B. Johnson",
-    "Richard Nixon",
-    "Ronald Reagan",
+#     "Gerald R. Ford",
+#     "Harry S. Truman",
+#     "Herbert Hoover",
+#     "Jimmy Carter",
+#     "John F. Kennedy",
+#     "Lyndon B. Johnson",
+#     "Richard Nixon",
+#     "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -53,18 +53,18 @@ for idx, name in enumerate(presidents):
 file_to_label = {
     "Obama": "Barack Obama",
     "Trump": "Donald J. Trump",
-    "Eisenhower": "Dwight D. Eisenhower",
-    "Roosevelt": "Franklin D. Roosevelt",
-    "Bush": "George Bush",
+#     "Eisenhower": "Dwight D. Eisenhower",
+#     "Roosevelt": "Franklin D. Roosevelt",
+#     "Bush": "George Bush",
     "WBush": "George W. Bush",
-    "Ford": "Gerald R. Ford",
-    "Truman": "Harry S. Truman",
-    "Hoover": "Herbert Hoover",
-    "Carter": "Jimmy Carter",
-    "Kennedy": "John F. Kennedy",
-    "Johnson": "Lyndon B. Johnson",
-    "Nixon": "Richard Nixon",
-    "Reagan": "Ronald Reagan",
+#     "Ford": "Gerald R. Ford",
+#     "Truman": "Harry S. Truman",
+#     "Hoover": "Herbert Hoover",
+#     "Carter": "Jimmy Carter",
+#     "Kennedy": "John F. Kennedy",
+#     "Johnson": "Lyndon B. Johnson",
+#     "Nixon": "Richard Nixon",
+#     "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -312,13 +312,13 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[ ]:
+# In[12]:
 
 
 ##
-## BASELINE
+## Multi-head RNN
 ##
-from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout, TimeDistributed
+from keras.layers import Input, Dense, SimpleRNN, Bidirectional
 from keras.layers.merge import Maximum, Add, Concatenate
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
 from keras.layers.merge import Average, Maximum
@@ -329,22 +329,21 @@ from keras.utils import plot_model
 # define operating vars
 activation = "relu" #"ReSQRT" 
 units = 150# 50
-dropout = 0.7646166765488501
+dropout = 0.0 #0.7646166765488501
 batch_size = 50# 100
 epochs = 100
-optimizer='adamax'#'rmsprop'
-shuffle=True #False
+optimizer= 'adamax'#'rmsprop'
+shuffle= True #False
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1,
-              patience=2, verbose=1)
+              patience=1, verbose=1)
 csv_logger = CSVLogger('Keras_Character_MultiHeadRNN.log')
 
 # assemble & compile model
 input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=units,activation=activation))(input)
+rnn = Bidirectional(SimpleRNN(units=units,activation=activation,recurrent_dropout=dropout))(input)
 
-## not entirely sure this makes sense, but it does seem to work...
 soft_out = []
 for idx in range(0,len(labels)):
     soft_out.append(Dense(len(labels),activation='softmax', kernel_initializer='random_normal')(rnn))
@@ -377,7 +376,15 @@ print ("Model saved.")
 del model
 
 
-# In[11]:
+# In[1]:
+
+
+##
+## MODEL EVALUATION
+##
+
+
+# In[ ]:
 
 
 ### Load computed model
@@ -387,7 +394,7 @@ model = load_model('Keras_Character_MultiHeadRNN.h5')
 print "Model loaded." 
 
 
-# In[12]:
+# In[ ]:
 
 
 from sklearn import metrics
@@ -410,7 +417,7 @@ print "\n\nDone prediction."
 print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
 
 
-# In[13]:
+# In[ ]:
 
 
 # Plot confusion matrix
@@ -439,11 +446,6 @@ def plot_confusion_matrix(cm,
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-#         print("Normalized confusion matrix")
-#     else:
-#         print('Confusion matrix, without normalization')
-
-#     print(cm)
 
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
@@ -480,7 +482,7 @@ plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
 plt.show()
 
 
-# In[14]:
+# In[ ]:
 
 
 binwidth = .05
@@ -490,7 +492,7 @@ plt.title('Frequency of predicted max probability per sequence')
 plt.show()
 
 
-# In[15]:
+# In[ ]:
 
 
 sample_idx = 20000
@@ -506,6 +508,97 @@ tokenizer_rev = {v: k for k, v in tokenizer.word_index.items()}
 for char in sample:
     sample_txt += tokenizer_rev[char]
 print sample_txt
+
+
+# In[15]:
+
+
+##
+## MODEL OPTIMIZATION
+##
+from keras.layers import Input, Dense, SimpleRNN, Bidirectional
+from keras.layers.merge import Maximum, Add, Concatenate
+from keras.callbacks import ReduceLROnPlateau, CSVLogger
+from keras.layers.merge import Average, Maximum
+from keras.optimizers import Adagrad, adam
+from keras.models import Model
+
+from sklearn.model_selection import GridSearchCV
+from keras.wrappers.scikit_learn import KerasClassifier
+
+# define operating vars
+# activation = "relu" #"ReSQRT" 
+# units = 150# 50
+# dropout = 0.0 #0.7646166765488501
+# batch_size = 50# 100
+# epochs = 100
+# optimizer='adamax'#'rmsprop'
+# shuffle=True #False
+
+def create_model(optimizer='rmsprop', learn_rate=0.01,
+                 init_mode1='glorot_uniform', init_mode2='glorot_uniform', 
+                 merge_mode='ave', activation='relu', 
+                 dropout_rate=0.0, neuron_count=50):
+
+    # assemble & compile model
+    input = Input(shape=(max_seq_len,unique_chars,))
+    rnn = Bidirectional(SimpleRNN(units=neuron_count,
+                                  activation=activation,
+                                  recurrent_dropout=dropout_rate,
+                                  kernel_initializer=init_mode1),
+                        merge_mode=merge_mode)(input)
+    
+    soft_out = []
+    for idx in range(0,len(labels)):
+        soft_out.append(Dense(len(labels),
+                              activation='softmax', 
+                              kernel_initializer=init_mode2)(rnn))
+    final_out = Add()(soft_out)
+
+    model = Model(inputs=[input], outputs = final_out) 
+
+    model.compile(loss='categorical_crossentropy', 
+                  optimizer=optimizer, 
+                  metrics=['categorical_accuracy'])
+
+    return model
+
+
+# instantiate model
+model = KerasClassifier(build_fn=create_model, verbose=1, epochs=5)
+
+# define the grid search parameters
+epoch = [3]
+batch_sizes = [25, 50, 75, 100, 200]
+optimizers = ['SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adam', 'Adamax', 'Nadam']
+init_modes1 = ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
+init_modes2 = init_modes1
+merge_modes = ['sum', 'mul', 'concat', 'ave', None]
+activations = ['ReSQRT','relu','sigmoid','tanh']
+dropout_rates = [0.0,0.2,0.4,0.6,0.8]
+neuron_counts = [25,50,75,100,150,200]
+learn_rates = [0.001, 0.01, 0.1, 0.2, 0.3]  #currently ignored
+param_grid = dict(batch_size=batch_sizes,
+                  epochs=epoch,
+                  optimizer=optimizers,
+                  learn_rate=learn_rates,
+                  init_mode1=init_modes1,
+                  init_mode2=init_modes2,
+                  merge_mode=merge_modes,
+                  activation=activations,
+                  dropout_rate=dropout_rates,
+                  neuron_count=neuron_counts)
+grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1)
+grid_result = grid.fit(train_X, train_y)
+
+# summarize results
+# from http://machinelearningmastery.com/grid-search-hyperparameters-deep-learning-models-python-keras/
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
 
 
 # In[ ]:
