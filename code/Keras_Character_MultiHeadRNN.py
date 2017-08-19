@@ -12,7 +12,7 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[2]:
+# In[16]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN.ipynb')
@@ -312,206 +312,6 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[12]:
-
-
-##
-## Multi-head RNN
-##
-from keras.layers import Input, Dense, SimpleRNN, Bidirectional
-from keras.layers.merge import Maximum, Add, Concatenate
-from keras.callbacks import ReduceLROnPlateau, CSVLogger
-from keras.layers.merge import Average, Maximum
-from keras.optimizers import Adagrad, adam
-from keras.models import Model
-from keras.utils import plot_model
-
-# define operating vars
-activation = "relu" #"ReSQRT" 
-units = 150# 50
-dropout = 0.0 #0.7646166765488501
-batch_size = 50# 100
-epochs = 100
-optimizer= 'adamax'#'rmsprop'
-shuffle= True #False
-
-# define any callbacks
-reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1,
-              patience=1, verbose=1)
-csv_logger = CSVLogger('Keras_Character_MultiHeadRNN.log')
-
-# assemble & compile model
-input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=units,activation=activation,recurrent_dropout=dropout))(input)
-
-soft_out = []
-for idx in range(0,len(labels)):
-    soft_out.append(Dense(len(labels),activation='softmax', kernel_initializer='random_normal')(rnn))
-final_out = Add()(soft_out)
-
-model = Model(inputs=[input], outputs = final_out) 
-
-model.compile(loss='categorical_crossentropy', 
-              optimizer=optimizer, 
-              metrics=['categorical_accuracy'])
-plot_model(model, to_file='Keras_Character_MultiHeadRNN.png', show_shapes=True, show_layer_names=True)
-print(model.summary())
-
-
-# In[ ]:
-
-
-# train the model
-model.fit([np.array(train_X)],
-          [np.array(train_y)],
-          batch_size=batch_size,
-          epochs=epochs,
-          shuffle=shuffle,
-          class_weight = y_weights,
-          callbacks=[reduce_lr, csv_logger],
-          verbose=1)
-
-model.save('Keras_Character_MultiHeadRNN.h5')
-print ("Model saved.")
-del model
-
-
-# In[1]:
-
-
-##
-## MODEL EVALUATION
-##
-
-
-# In[ ]:
-
-
-### Load computed model
-from keras.models import load_model
-# returns a compiled model identical to the one trained
-model = load_model('Keras_Character_MultiHeadRNN.h5')
-print "Model loaded." 
-
-
-# In[ ]:
-
-
-from sklearn import metrics
-
-batch_size = 50# 100
-
-# Evaluate performance
-print "Evaluating test data..."
-loss_and_metrics = model.evaluate(test_X, test_y)
-print model.metrics_names
-print loss_and_metrics
-
-# Make some predictions
-print "\nPredicting using test data..."
-pred_y = model.predict(test_X, batch_size=batch_size, verbose=1)
-pred_y_collapsed = np.argmax(pred_y, axis=1)
-test_y_collapsed = np.argmax(test_y, axis=1)
-print "\n\nDone prediction."
-
-print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
-
-
-# In[ ]:
-
-
-# Plot confusion matrix
-#   from scikit-learn examples @
-#   http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html 
-get_ipython().magic(u'matplotlib inline')
-import itertools
-from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
-
-def plot_confusion_matrix(cm, 
-                          classes,
-                          normalize=False,
-                          title='Confusion matrix',
-                          cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=90)
-    plt.yticks(tick_marks, classes)
-
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-
-    #plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-
-# Compute confusion matrix
-cnf_matrix = confusion_matrix(test_y_collapsed, pred_y_collapsed)
-np.set_printoptions(precision=2)
-
-# Plot non-normalized confusion matrix
-plt.figure(figsize=(10,10))
-plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
-                      title='Confusion matrix, without normalization')
-
-plt.show()
-
-
-# In[ ]:
-
-
-#Plot normalized confusion matrix
-cnf_matrix_pct = cnf_matrix *1.0
-cnf_matrix_pct = np.around(np.array([row*100.0/sum(row) for row in cnf_matrix_pct]), 2)
-
-plt.figure(figsize=(10,10))
-plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
-                      title='Confusion matrix on accuracy percentage')
-plt.show()
-
-
-# In[ ]:
-
-
-binwidth = .05
-pred_outs = pred_y/len(labels)
-plt.hist(pred_outs.max(axis=1),bins=np.arange(0.0, 1.0, 0.05))
-plt.title('Frequency of predicted max probability per sequence')
-plt.show()
-
-
-# In[ ]:
-
-
-sample_idx = 20000
-print "Predicted President: ", np.argmax(labels[pred_y[sample_idx]])
-print "Actual President: ", np.argmax(labels[test_y[sample_idx]])
-print split_text[sample_idx-1:sample_idx+1]
-
-# print one sequence on either side of confused
-sample = split_text[sample_idx-1:sample_idx+1]
-sample = sum(sample, [])
-sample_txt = ""
-tokenizer_rev = {v: k for k, v in tokenizer.word_index.items()}
-for char in sample:
-    sample_txt += tokenizer_rev[char]
-print sample_txt
-
-
-# In[15]:
-
 
 ##
 ## MODEL OPTIMIZATION
@@ -559,7 +359,7 @@ def create_model(optimizer='rmsprop', learn_rate=0.01,
 
     model.compile(loss='categorical_crossentropy', 
                   optimizer=optimizer, 
-                  metrics=['categorical_accuracy'])
+                  metrics=['accuracy'])
 
     return model
 
