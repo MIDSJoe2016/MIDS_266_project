@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[18]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[16]:
+# In[19]:
 
 
-get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN.ipynb')
+#get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN.ipynb')
 
 
-# In[2]:
+# In[20]:
 
 
 import glob, os, json, re, unicodedata
@@ -30,18 +30,18 @@ loaded_text = []
 presidents = [
     "Barack Obama",
     "Donald J. Trump",
-#     "Dwight D. Eisenhower",
-#     "Franklin D. Roosevelt",
-#     "George Bush",
+    "Dwight D. Eisenhower",
+    "Franklin D. Roosevelt",
+    "George Bush",
     "George W. Bush",
-#     "Gerald R. Ford",
-#     "Harry S. Truman",
-#     "Herbert Hoover",
-#     "Jimmy Carter",
-#     "John F. Kennedy",
-#     "Lyndon B. Johnson",
-#     "Richard Nixon",
-#     "Ronald Reagan",
+    "Gerald R. Ford",
+    "Harry S. Truman",
+    "Herbert Hoover",
+    "Jimmy Carter",
+    "John F. Kennedy",
+    "Lyndon B. Johnson",
+    "Richard Nixon",
+    "Ronald Reagan",
     "William J. Clinton"
 ]
 
@@ -53,18 +53,18 @@ for idx, name in enumerate(presidents):
 file_to_label = {
     "Obama": "Barack Obama",
     "Trump": "Donald J. Trump",
-#     "Eisenhower": "Dwight D. Eisenhower",
-#     "Roosevelt": "Franklin D. Roosevelt",
-#     "Bush": "George Bush",
+    "Eisenhower": "Dwight D. Eisenhower",
+    "Roosevelt": "Franklin D. Roosevelt",
+    "Bush": "George Bush",
     "WBush": "George W. Bush",
-#     "Ford": "Gerald R. Ford",
-#     "Truman": "Harry S. Truman",
-#     "Hoover": "Herbert Hoover",
-#     "Carter": "Jimmy Carter",
-#     "Kennedy": "John F. Kennedy",
-#     "Johnson": "Lyndon B. Johnson",
-#     "Nixon": "Richard Nixon",
-#     "Reagan": "Ronald Reagan",
+    "Ford": "Gerald R. Ford",
+    "Truman": "Harry S. Truman",
+    "Hoover": "Herbert Hoover",
+    "Carter": "Jimmy Carter",
+    "Kennedy": "John F. Kennedy",
+    "Johnson": "Lyndon B. Johnson",
+    "Nixon": "Richard Nixon",
+    "Reagan": "Ronald Reagan",
     "Clinton": "William J. Clinton"
 }
 
@@ -90,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[3]:
+# In[21]:
 
 
 #
@@ -120,7 +120,7 @@ for x in range(0,len(loaded_text)):
 print "Character clean-up complete."
 
 
-# In[4]:
+# In[22]:
 
 
 #
@@ -148,7 +148,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[5]:
+# In[23]:
 
 
 #
@@ -170,7 +170,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[6]:
+# In[24]:
 
 
 #
@@ -206,7 +206,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[7]:
+# In[25]:
 
 
 #
@@ -232,7 +232,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[8]:
+# In[26]:
 
 
 #
@@ -252,7 +252,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[9]:
+# In[27]:
 
 
 #
@@ -282,7 +282,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[10]:
+# In[28]:
 
 
 # custom activation from Bagnall 2015
@@ -312,9 +312,11 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
+# In[30]:
+
 
 ##
-## MODEL OPTIMIZATION
+## Multi-head RNN
 ##
 from keras.layers import Input, Dense, SimpleRNN, Bidirectional
 from keras.layers.merge import Maximum, Add, Concatenate
@@ -322,87 +324,65 @@ from keras.callbacks import ReduceLROnPlateau, CSVLogger
 from keras.layers.merge import Average, Maximum
 from keras.optimizers import Adagrad, adam
 from keras.models import Model
+from keras.utils import plot_model
 
-from sklearn.model_selection import GridSearchCV
-from keras.wrappers.scikit_learn import KerasClassifier
+# set parameters; determined by optimization @ end
+init_modes = 'random_normal'
+batch_size = unique_chars
+units = unique_chars
+optimizer = 'Adamax'
+dropout = 0.2
+activation = 'relu'
+merge_mode = 'concat'
+shuffle = True
 
-# define operating vars
-# activation = "relu" #"ReSQRT" 
-# units = 150# 50
-# dropout = 0.0 #0.7646166765488501
-# batch_size = 50# 100
-# epochs = 100
-# optimizer='adamax'#'rmsprop'
-# shuffle=True #False
+epochs = 100
 
-def create_model(optimizer='rmsprop', learn_rate=0.01,
-                 init_mode1='glorot_uniform', init_mode2='glorot_uniform', 
-                 merge_mode='ave', activation='relu', 
-                 dropout_rate=0.0, neuron_count=50):
+# define any callbacks
+reduce_lr = ReduceLROnPlateau(monitor='loss', 
+                              factor=0.1,
+                              patience=1, 
+                              verbose=1)
+csv_logger = CSVLogger('Keras_Character_MultiHeadRNN.log')
 
-    # assemble & compile model
-    input = Input(shape=(max_seq_len,unique_chars,))
-    rnn = Bidirectional(SimpleRNN(units=neuron_count,
-                                  activation=activation,
-                                  recurrent_dropout=dropout_rate,
-                                  kernel_initializer=init_mode1),
-                        merge_mode=merge_mode)(input)
-    
-    soft_out = []
-    for idx in range(0,len(labels)):
-        soft_out.append(Dense(len(labels),
-                              activation='softmax', 
-                              kernel_initializer=init_mode2)(rnn))
-    final_out = Add()(soft_out)
+# assemble & compile model
+main_input = Input(shape=(max_seq_len,unique_chars,))
+rnn = Bidirectional(SimpleRNN(units=units,
+                              activation=activation,
+                              recurrent_dropout=dropout,
+                              kernel_initializer=init_modes),
+                    merge_mode=merge_mode)(main_input)
 
-    model = Model(inputs=[input], outputs = final_out) 
+soft_out = []
+for idx in range(0,len(labels)):
+    soft_out.append(Dense(len(labels),
+                          activation='softmax', 
+                          kernel_initializer=init_modes)(rnn))
+final_out = Add()(soft_out)
 
-    model.compile(loss='categorical_crossentropy', 
-                  optimizer=optimizer, 
-                  metrics=['accuracy'])
+model = Model(inputs=[main_input], outputs = final_out) 
 
-    return model
-
-
-# instantiate model
-model = KerasClassifier(build_fn=create_model, verbose=1, epochs=5)
-
-# define the grid search parameters
-epoch = [3]
-batch_sizes = [25, 50, 75, 100, 200]
-optimizers = ['SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adam', 'Adamax', 'Nadam']
-init_modes1 = ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
-init_modes2 = init_modes1
-merge_modes = ['sum', 'mul', 'concat', 'ave', None]
-activations = ['ReSQRT','relu','sigmoid','tanh']
-dropout_rates = [0.0,0.2,0.4,0.6,0.8]
-neuron_counts = [25,50,75,100,150,200]
-learn_rates = [0.001, 0.01, 0.1, 0.2, 0.3]  #currently ignored
-param_grid = dict(batch_size=batch_sizes,
-                  epochs=epoch,
-                  optimizer=optimizers,
-                  learn_rate=learn_rates,
-                  init_mode1=init_modes1,
-                  init_mode2=init_modes2,
-                  merge_mode=merge_modes,
-                  activation=activations,
-                  dropout_rate=dropout_rates,
-                  neuron_count=neuron_counts)
-grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1)
-grid_result = grid.fit(train_X, train_y)
-
-# summarize results
-# from http://machinelearningmastery.com/grid-search-hyperparameters-deep-learning-models-python-keras/
-print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
-means = grid_result.cv_results_['mean_test_score']
-stds = grid_result.cv_results_['std_test_score']
-params = grid_result.cv_results_['params']
-for mean, stdev, param in zip(means, stds, params):
-    print("%f (%f) with: %r" % (mean, stdev, param))
+model.compile(loss='categorical_crossentropy', 
+              optimizer=optimizer, 
+              metrics=['categorical_accuracy'])
+#plot_model(model, to_file='Keras_Character_MultiHeadRNN.png', show_shapes=True, show_layer_names=True)
+print(model.summary())
 
 
 # In[ ]:
 
 
+# train the model
+model.fit([np.array(train_X)],
+          [np.array(train_y)],
+          batch_size=batch_size,
+          epochs=epochs,
+          shuffle=shuffle,
+          class_weight = y_weights,
+          callbacks=[reduce_lr, csv_logger],
+          verbose=1)
 
+model.save('Keras_Character_MultiHeadRNN.h5')
+print ("Model saved.")
+del model
 
