@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[71]:
+# In[317]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[287]:
+# In[318]:
 
 
-#get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN_Adjusted.ipynb')
+get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN_Adjusted.ipynb')
 
 
-# In[293]:
+# In[319]:
 
 
 import glob, os, json, re, unicodedata
@@ -90,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[294]:
+# In[320]:
 
 
 #
@@ -120,7 +120,7 @@ for x in range(0,len(loaded_text)):
 print "Character clean-up complete."
 
 
-# In[295]:
+# In[321]:
 
 
 #
@@ -148,7 +148,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[296]:
+# In[322]:
 
 
 #
@@ -170,7 +170,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[297]:
+# In[323]:
 
 
 #
@@ -206,7 +206,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[298]:
+# In[324]:
 
 
 #
@@ -232,7 +232,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[299]:
+# In[325]:
 
 
 #
@@ -252,7 +252,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[300]:
+# In[326]:
 
 
 #
@@ -282,7 +282,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[301]:
+# In[327]:
 
 
 # custom activation from Bagnall 2015
@@ -312,7 +312,7 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[302]:
+# In[328]:
 
 
 ##
@@ -375,11 +375,11 @@ model = Model(inputs=main_inputs,
 model.compile(loss='binary_crossentropy', 
               optimizer=optimizer, 
               metrics=['accuracy'])
-#plot_model(model, to_file='Keras_Character_MultiHeadRNN_Adjusted.png', show_shapes=True, show_layer_names=True)
+plot_model(model, to_file='Keras_Character_MultiHeadRNN_Adjusted.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
 
-# In[303]:
+# In[329]:
 
 
 # adjust training for new model
@@ -394,7 +394,7 @@ for x in range(0,len(labels)):
 print len(test_y_flat[0])
 
 
-# In[305]:
+# In[ ]:
 
 
 # train the model
@@ -415,3 +415,249 @@ model.fit(all_training,
 model.save('Keras_Character_MultiHeadRNN_Adjusted.h5')
 print ("Model saved.")
 del model
+
+
+# In[ ]:
+
+
+##
+## MODEL EVALUATION
+##
+
+
+# In[ ]:
+
+
+### Load computed model
+from keras.models import load_model
+# returns a compiled model identical to the one trained
+model = load_model('Keras_Character_MultiHeadRNN_Adjusted.h5')
+print "Model loaded." 
+
+
+# In[331]:
+
+
+from sklearn import metrics
+
+batch_size = 50
+
+all_test = []
+for x in range(0,len(labels)):
+    all_test.append(np.asarray(test_X))
+    
+# Evaluate performance
+print "Evaluating test data..."
+loss_and_metrics = model.evaluate(all_test,[np.swapaxes(np.asarray(test_y_flat),0,1)])
+print "\n", model.metrics_names
+print "\n", loss_and_metrics
+
+
+# In[332]:
+
+
+# Make some predictions
+print "\nPredicting using test data..."
+pred_y = model.predict(all_test,batch_size=batch_size, verbose=1)
+print "\n\nDone prediction."
+
+
+# In[333]:
+
+
+pred_y_collapsed = np.argmax(pred_y, axis=1)
+test_y_collapsed = np.argmax(test_y, axis=1)
+
+#print "\nAUC = ", metrics.roc_auc_score(test_y_collapsed, pred_y_collapsed)
+
+
+# In[334]:
+
+
+# Plot confusion matrix
+#   from scikit-learn examples @
+#   http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html 
+get_ipython().magic(u'matplotlib inline')
+import itertools
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+
+def plot_confusion_matrix(cm, 
+                          classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=90)
+    plt.yticks(tick_marks, classes)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    #plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+# Compute confusion matrix
+cnf_matrix = confusion_matrix(test_y_collapsed, pred_y_collapsed)
+np.set_printoptions(precision=2)
+
+# Plot non-normalized confusion matrix
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix, without normalization')
+
+plt.show()
+
+
+# In[335]:
+
+
+#Plot normalized confusion matrix
+cnf_matrix_pct = cnf_matrix *1.0
+cnf_matrix_pct = np.around(np.array([row*100.0/sum(row) for row in cnf_matrix_pct]), 2)
+
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix on accuracy percentage')
+plt.show()
+
+
+# In[336]:
+
+
+sample_idx = 20000
+print(pred_y[sample_idx])
+print(test_y[sample_idx])
+
+inv_labels = {v: k for k, v in labels.iteritems()}
+print "Predicted:", inv_labels[np.argmax(pred_y[sample_idx])], "\tActual:", inv_labels[np.argmax(test_y[sample_idx])]
+#print split_text[sample_idx-1:sample_idx+1]
+
+# print one sequence on either side of confused
+sample = split_text[sample_idx-1:sample_idx+1]
+sample = sum(sample, [])
+sample_txt = ""
+tokenizer_rev = {v: k for k, v in tokenizer.word_index.items()}
+for char in sample:
+    sample_txt += tokenizer_rev[char]
+print sample_txt
+
+
+# In[337]:
+
+
+binwidth = .05
+#pred_outs = pred_y/len(labels)
+plt.hist(pred_y.max(axis=1),bins=np.arange(0.0, 0.5, 0.01))
+plt.title('Frequency of predicted max probability per sequence')
+plt.show()
+
+
+# In[ ]:
+
+
+##
+## MODEL OPTIMIZATION
+##
+
+
+# In[ ]:
+
+
+# from keras.layers import Input, Dense, SimpleRNN, Bidirectional
+# from keras.layers.merge import Maximum, Add, Concatenate
+# from keras.callbacks import ReduceLROnPlateau, CSVLogger
+# from keras.layers.merge import Average, Maximum
+# from keras.optimizers import Adagrad, adam
+# from keras.models import Model
+
+# from sklearn.model_selection import GridSearchCV
+# from keras.wrappers.scikit_learn import KerasClassifier
+
+# # define operating vars
+# # activation = "relu" #"ReSQRT" 
+# # units = 150# 50
+# # dropout = 0.0 #0.7646166765488501
+# # batch_size = 50# 100
+# # epochs = 100
+# # optimizer='adamax'#'rmsprop'
+# # shuffle=True #False
+
+# def create_model(optimizer='rmsprop', learn_rate=0.01,
+#                  init_mode1='glorot_uniform', init_mode2='glorot_uniform', 
+#                  merge_mode='ave', activation='relu', 
+#                  dropout_rate=0.0, neuron_count=50):
+
+#     # assemble & compile model
+#     input = Input(shape=(max_seq_len,unique_chars,))
+#     rnn = Bidirectional(SimpleRNN(units=neuron_count,
+#                                   activation=activation,
+#                                   recurrent_dropout=dropout_rate,
+#                                   kernel_initializer=init_mode1),
+#                         merge_mode=merge_mode)(input)
+    
+#     soft_out = []
+#     for idx in range(0,len(labels)):
+#         soft_out.append(Dense(len(labels),
+#                               activation='softmax', 
+#                               kernel_initializer=init_mode2)(rnn))
+#     final_out = Add()(soft_out)
+
+#     model = Model(inputs=[input], outputs = final_out) 
+
+#     model.compile(loss='categorical_crossentropy', 
+#                   optimizer=optimizer, 
+#                   metrics=['accuracy'])
+
+#     return model
+
+
+# # instantiate model
+# model = KerasClassifier(build_fn=create_model, verbose=1)
+
+# # define the grid search parameters
+# epoch = [2]
+# batch_sizes = [25,50,75]
+# optimizers = ['SGD', 'RMSprop', 'Adagrad', 'Adamax']
+# init_modes1 = ['uniform', 'normal', 'zero']
+# merge_modes = ['sum', 'mul', 'concat', 'ave']
+# activations = ['relu','tanh']
+# dropout_rates = [0.0,0.5,0.9]
+# neuron_counts = [25,50,75]
+# learn_rates = [0.01,0.1,0.2]
+# param_grid = dict(batch_size=batch_sizes,
+#                   epochs=epoch,
+#                   optimizer=optimizers,
+#                   learn_rate=learn_rates,
+#                   init_mode1=init_modes1,
+#                   init_mode2=init_modes2,
+#                   merge_mode=merge_modes,
+#                   activation=activations,
+#                   dropout_rate=dropout_rates,
+#                   neuron_count=neuron_counts)
+# grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1, verbose=2, cv=2)
+# grid_result = grid.fit(train_X, train_y)
+
+# # summarize results
+# # from http://machinelearningmastery.com/grid-search-hyperparameters-deep-learning-models-python-keras/
+# print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+# means = grid_result.cv_results_['mean_test_score']
+# stds = grid_result.cv_results_['std_test_score']
+# params = grid_result.cv_results_['params']
+# for mean, stdev, param in zip(means, stds, params):
+#     print("%f (%f) with: %r" % (mean, stdev, param))
+

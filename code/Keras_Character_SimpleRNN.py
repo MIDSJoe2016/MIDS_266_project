@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -16,13 +16,13 @@ import random as rn
 rn.seed(3)
 
 
-# In[2]:
+# In[4]:
 
 
-#get_ipython().system(u'jupyter nbconvert --to script Keras_Character_SimpleRNN.ipynb')
+get_ipython().system(u'jupyter nbconvert --to script Keras_Character_SimpleRNN.ipynb')
 
 
-# In[3]:
+# In[5]:
 
 
 import glob, os, json, re, unicodedata
@@ -94,7 +94,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[4]:
+# In[6]:
 
 
 #
@@ -124,14 +124,14 @@ for x in range(0,len(loaded_text)):
 print "Character clean-up complete."
 
 
-# In[5]:
+# In[7]:
 
 
 # Have a look at a scrubbed text excerpt
 print loaded_text[200][:750]
 
 
-# In[6]:
+# In[8]:
 
 
 #
@@ -159,7 +159,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[7]:
+# In[9]:
 
 
 #
@@ -181,7 +181,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[8]:
+# In[10]:
 
 
 #
@@ -189,14 +189,18 @@ print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 #
 from collections import Counter
 
-def splits(_list, _split_size):
+def splits(_list, _split_size, window=False):
     output_list = []
-    for idx in range(0, len(_list), _split_size):
-        if (idx + _split_size) <= len(_list):
+    if (window):
+        for idx in range(0, len(_list)-_split_size):
             output_list.append(_list[idx:idx + _split_size])
+    else:
+        for idx in range(0, len(_list), _split_size):
+            if (idx + _split_size) <= len(_list):
+                output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 50
+max_seq_len = 100 #50
 
 # create new speech/label holders
 split_text = []
@@ -205,7 +209,7 @@ split_labels = []
 for idx in range(0, len(tokenized_text)):
     current_label = idx
     current_speech = tokenized_text[idx]#[:label_min_chars]
-    current_splits = splits(current_speech, max_seq_len)
+    current_splits = splits(current_speech, max_seq_len) #, window=True)
     split_text.extend(current_splits)
     split_labels.extend([current_label] * len(current_splits))
 
@@ -213,7 +217,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[9]:
+# In[11]:
 
 
 # Have a look at a few split text excerpts
@@ -221,7 +225,7 @@ print split_text[10:15]
 print split_labels[10:15]
 
 
-# In[10]:
+# In[12]:
 
 
 #
@@ -253,7 +257,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8, shuffle_p=
     return train_text, train_labels, test_text, test_labels
 
 
-# In[11]:
+# In[13]:
 
 
 #
@@ -273,7 +277,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "\nClass weights:\n", y_weights
 
 
-# In[12]:
+# In[14]:
 
 
 # Have a look at a few of the split text excerpts; 
@@ -282,7 +286,7 @@ print train_X[10:15]
 print train_y[10:15]
 
 
-# In[13]:
+# In[15]:
 
 
 #
@@ -312,7 +316,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[14]:
+# In[114]:
 
 
 # Have a again look at a few of the split and encoded text excerpts; 
@@ -321,7 +325,7 @@ print train_X[10:11]
 print train_y[10:11]
 
 
-# In[ ]:
+# In[16]:
 
 
 ##
@@ -329,12 +333,12 @@ print train_y[10:11]
 ##
 from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
-from keras.optimizers import Adagrad, adam
+from keras.optimizers import Adamax
 from keras.models import Model
 from keras.utils import plot_model
 
 # set parameters; determined by optimization @ end
-init_modes = 'glorot_uniform'
+init_modes = 'random_uniform'
 batch_size = unique_chars
 units = unique_chars
 dropout = 0.2
@@ -344,7 +348,7 @@ shuffle = True
 
 optimizer = Adamax(lr=0.01) 
 
-epochs = 100
+epochs = 50
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='loss', 
@@ -369,7 +373,7 @@ model.compile(loss='categorical_crossentropy',
               optimizer=optimizer, 
               metrics=['categorical_accuracy'])
 
-#plot_model(model, to_file='Keras_Character_SimpleRNN.png', show_shapes=True, show_layer_names=True)
+plot_model(model, to_file='Keras_Character_SimpleRNN.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
 
 
@@ -389,4 +393,208 @@ model.fit([np.array(train_X)],
 model.save('Keras_Character_SimpleRNN.h5')
 print ("Model saved.")
 del model
+
+
+# In[ ]:
+
+
+##
+## MODEL EVALUATION
+##
+
+
+# In[79]:
+
+
+# Load computed model
+from keras.models import load_model
+# returns a compiled model identical to the one trained
+model = load_model('Keras_Character_SimpleRNN.h5')
+print ("Model re-loaded.")
+
+
+# In[119]:
+
+
+from sklearn import metrics
+
+batch_size = 50
+# Evaluate performance
+print "Evaluating test data..."
+loss_and_metrics = model.evaluate(test_X, test_y)
+print model.metrics_names
+print loss_and_metrics
+
+# Make some predictions
+print "\nPredicting using test data..."
+pred_y = model.predict(test_X, batch_size=batch_size, verbose=1)
+pred_y_collapsed = np.argmax(pred_y, axis=1)
+test_y_collapsed = np.argmax(test_y, axis=1)
+print "\n\nDone prediction."
+
+print "\nAUC = ", metrics.roc_auc_score(test_y, pred_y)
+
+
+# In[120]:
+
+
+# Plot confusion matrix
+#   from scikit-learn examples @
+#   http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html 
+get_ipython().magic(u'matplotlib inline')
+import itertools
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=90)
+    plt.yticks(tick_marks, classes)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    #plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+# Compute confusion matrix
+cnf_matrix = confusion_matrix(test_y_collapsed, pred_y_collapsed)
+np.set_printoptions(precision=2)
+
+# Plot non-normalized confusion matrix
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix, without normalization')
+
+plt.show()
+
+
+# In[121]:
+
+
+#Plot normalized confusion matrix
+cnf_matrix_pct = cnf_matrix *1.0
+cnf_matrix_pct = np.around(np.array([row*100.0/sum(row) for row in cnf_matrix_pct]), 2)
+
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix on accuracy percentage')
+plt.show()
+
+
+# In[122]:
+
+
+binwidth = .05
+pred_outs = pred_y
+plt.hist(pred_outs.max(axis=1),bins=np.arange(0.0, 1.0, 0.01))
+plt.title('Frequency of predicted max probability per sequence')
+plt.show()
+
+
+# In[ ]:
+
+
+##
+## MODEL OPTIMIZATION
+##
+from keras.layers import Input, Dense, SimpleRNN, Bidirectional, Dropout
+from keras.callbacks import ReduceLROnPlateau, CSVLogger
+from keras.optimizers import Adamax
+from keras.models import Model
+from keras.utils import plot_model
+
+from sklearn.model_selection import GridSearchCV
+from keras.wrappers.scikit_learn import KerasClassifier
+
+# define operating vars
+#optimizer='rmsprop'
+#dropout = 0.5422412690636627
+#activation = "relu"
+#batch_size = 50
+#units = 50
+#shuffle = True
+#epochs = 150
+#merge_mode = 'ave'
+
+def create_model(optimizer='rmsprop', learn_rate=0.01,
+                 init_mode1='glorot_uniform', init_mode2='glorot_uniform', 
+                 merge_mode='ave', activation='relu', 
+                 dropout_rate=0.0, neuron_count=50):
+    # assemble & compile model
+    main_input = Input(shape=(max_seq_len,unique_chars,))
+    rnn = Bidirectional(SimpleRNN(units=neuron_count,
+                                  activation=activation,
+                                  kernel_initializer=init_mode1,
+                                  recurrent_dropout=dropout_rate),
+                        merge_mode=merge_mode)(main_input)
+    main_output = Dense(len(labels),
+                        activation='softmax',
+                        kernel_initializer=init_mode2)(rnn)
+    model = Model(inputs=[main_input], outputs=[main_output])
+    model.compile(loss='categorical_crossentropy', 
+              optimizer=optimizer, 
+              metrics=['accuracy','categorical_accuracy'])
+
+    return model
+
+
+# instantiate model
+model = KerasClassifier(build_fn=create_model, verbose=1)
+
+# define the grid search parameters
+epoch = [2]
+batch_sizes = [unique_chars]
+optimizers = ['Adamax']
+init_modes1 = ['normal']
+init_modes2 = init_modes1
+merge_modes = ['concat']
+activations = ['relu']
+dropout_rates = [0.2]
+neuron_counts = [unique_chars]
+learn_rates = [0.2]
+param_grid = dict(batch_size=batch_sizes,
+                  epochs=epoch,
+                  optimizer=optimizers,
+                  learn_rate=learn_rates,
+                  init_mode1=init_modes1,
+                  init_mode2=init_modes2,
+                  merge_mode=merge_modes,
+                  activation=activations,
+                  dropout_rate=dropout_rates,
+                  neuron_count=neuron_counts)
+grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1, verbose=2, cv=2)
+grid_result = grid.fit(train_X, train_y)
+
+# summarize results
+# from http://machinelearningmastery.com/grid-search-hyperparameters-deep-learning-models-python-keras/
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+
+
+# In[ ]:
+
+
+
 
