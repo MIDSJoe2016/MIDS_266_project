@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[71]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[2]:
+# In[72]:
 
 
-#get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN.ipynb')
+get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN_Adjusted.ipynb')
 
 
-# In[3]:
+# In[204]:
 
 
 import glob, os, json, re, unicodedata
@@ -90,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[4]:
+# In[205]:
 
 
 #
@@ -120,7 +120,7 @@ for x in range(0,len(loaded_text)):
 print "Character clean-up complete."
 
 
-# In[5]:
+# In[206]:
 
 
 #
@@ -148,7 +148,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[6]:
+# In[207]:
 
 
 #
@@ -170,7 +170,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[7]:
+# In[208]:
 
 
 #
@@ -189,7 +189,7 @@ def splits(_list, _split_size, window=False):
                 output_list.append(_list[idx:idx + _split_size])
     return output_list
 
-max_seq_len = 25
+max_seq_len = 50
 
 # create new speech/label holders
 split_text = []
@@ -198,7 +198,7 @@ split_labels = []
 for idx in range(0, len(tokenized_text)):
     current_label = idx
     current_speech = tokenized_text[idx]#[:label_min_chars]
-    current_splits = splits(current_speech, max_seq_len)
+    current_splits = splits(current_speech, max_seq_len, window=False)
     split_text.extend(current_splits)
     split_labels.extend([current_label] * len(current_splits))
 
@@ -206,7 +206,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[8]:
+# In[209]:
 
 
 #
@@ -232,7 +232,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[9]:
+# In[210]:
 
 
 #
@@ -243,7 +243,7 @@ from sklearn.utils import class_weight
 
 # split data smartly
 train_X, train_y, test_X, test_y = split_test_train(split_text, split_labels, 
-                                                    labels, train_pct=0.8)
+                                                    labels, train_pct=0.9)
 print "Splits:\n Test = ", len(train_X), "\n Train = ", len(test_X)##
 
 # compute class weights to account for imbalanced classes
@@ -252,7 +252,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[10]:
+# In[211]:
 
 
 #
@@ -282,7 +282,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[11]:
+# In[212]:
 
 
 # custom activation from Bagnall 2015
@@ -312,9 +312,20 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[12]:
+# In[243]:
 
 
+##
+##
+##
+##
+##
+##
+## MESSY ONE
+##
+##
+##
+##
 ##
 ## Multi-head RNN
 ##
@@ -322,22 +333,22 @@ from keras.layers import Input, Dense, SimpleRNN, Bidirectional
 from keras.layers.merge import Maximum, Add, Concatenate
 from keras.callbacks import ReduceLROnPlateau, CSVLogger
 from keras.layers.merge import Average, Maximum
-from keras.optimizers import Adamax, RMSProp
+from keras.optimizers import Adamax, RMSprop
 from keras.models import Model
 from keras.utils import plot_model
 
 # set parameters; determined by optimization @ end
-init_modes = 'random_normal'
+init_modes = 'glorot_uniform'
 batch_size = unique_chars
 units = unique_chars
 dropout = 0.2
 activation = 'relu'
-merge_mode = 'sum' #concat'
-shuffle = False #True
+merge_mode = 'sum'
+shuffle = True
 
-optimizer = RMSProp(lr=0.01) #'Adamax'
+optimizer = Adamax(lr=0.01) 
 
-epochs = 100
+epochs = 50
 
 # define any callbacks
 reduce_lr = ReduceLROnPlateau(monitor='loss', 
@@ -347,43 +358,325 @@ reduce_lr = ReduceLROnPlateau(monitor='loss',
 csv_logger = CSVLogger('Keras_Character_MultiHeadRNN.log')
 
 # assemble & compile model
-main_input = Input(shape=(max_seq_len,unique_chars,))
-rnn = Bidirectional(SimpleRNN(units=units,
+main_input1 = Input(shape=(max_seq_len,unique_chars,),name="main_input1")
+main_input2 = Input(shape=(max_seq_len,unique_chars,),name="main_input2")
+main_input3 = Input(shape=(max_seq_len,unique_chars,),name="main_input3")
+main_input4 = Input(shape=(max_seq_len,unique_chars,),name="main_input4")
+
+rnn1 = Bidirectional(SimpleRNN(units=units,
                               activation=activation,
                               recurrent_dropout=dropout,
                               kernel_initializer=init_modes),
-                    merge_mode=merge_mode)(main_input)
+                    merge_mode=merge_mode)(main_input1)
+softmax1 = Dense(1,
+                 activation='sigmoid',
+                 kernel_initializer=init_modes)(rnn1)
+rnn2 = Bidirectional(SimpleRNN(units=units,
+                              activation=activation,
+                              recurrent_dropout=dropout,
+                              kernel_initializer=init_modes),
+                    merge_mode=merge_mode)(main_input2)
+softmax2 = Dense(1,
+                 activation='sigmoid',
+                 kernel_initializer=init_modes)(rnn2)
+rnn3 = Bidirectional(SimpleRNN(units=units,
+                              activation=activation,
+                              recurrent_dropout=dropout,
+                              kernel_initializer=init_modes),
+                    merge_mode=merge_mode)(main_input3)
+softmax3 = Dense(1,
+                 activation='sigmoid',
+                 kernel_initializer=init_modes)(rnn3)
+rnn4 = Bidirectional(SimpleRNN(units=units,
+                              activation=activation,
+                              recurrent_dropout=dropout,
+                              kernel_initializer=init_modes),
+                    merge_mode=merge_mode)(main_input4)
+softmax4 = Dense(1,
+                 activation='sigmoid',
+                 kernel_initializer=init_modes)(rnn4)
 
-soft_out = []
-for idx in range(0,len(labels)):
-    soft_out.append(Dense(len(labels),
-                          activation='softmax', 
-                          kernel_initializer=init_modes)(rnn))
-final_out = Add()(soft_out)
+final_out = Concatenate()([softmax1,softmax2,softmax3,softmax4])
 
-model = Model(inputs=[main_input], outputs = final_out) 
+model = Model(inputs=[main_input1, main_input2, main_input3, main_input4], 
+              outputs=[final_out]) #softmax1,softmax2,softmax3,softmax4
 
-model.compile(loss='categorical_crossentropy', 
+model.compile(loss='binary_crossentropy', 
               optimizer=optimizer, 
-              metrics=['categorical_accuracy'])
-#plot_model(model, to_file='Keras_Character_MultiHeadRNN.png', show_shapes=True, show_layer_names=True)
+              metrics=['accuracy'])
+plot_model(model, to_file='Keras_Character_MultiHeadRNN_Adjusted.png', show_shapes=True, show_layer_names=True)
 print(model.summary())
+
+
+# In[245]:
+
+
+# adjust training for new model
+train_y_flat = []
+for x in range(0,len(labels)):
+    train_y_flat.append((train_y[:,x] == 1).astype(np.int))
+print len(train_y_flat[0])
+
+test_y_flat = []
+for x in range(0,len(labels)):
+    test_y_flat.append((test_y[:,x] == 1).astype(np.int))
+print len(test_y_flat[0])
+
+
+# In[263]:
+
+
+# train the model
+    
+model.fit([np.asarray(train_X),np.asarray(train_X),np.asarray(train_X),np.asarray(train_X)],
+          [np.swapaxes(np.asarray(train_y_flat),0,1)],
+          batch_size=batch_size,
+          epochs=epochs,
+          #shuffle=shuffle,
+          class_weight = y_weights,
+          callbacks=[reduce_lr, csv_logger],
+          verbose=1)
+
+model.save('Keras_Character_MultiHeadRNN_Adjusted.h5')
+print ("Model saved.")
+del model
 
 
 # In[ ]:
 
 
-# train the model
-model.fit([np.array(train_X)],
-          [np.array(train_y)],
-          batch_size=batch_size,
-          epochs=epochs,
-          shuffle=shuffle,
-          class_weight = y_weights,
-          callbacks=[reduce_lr, csv_logger],
-          verbose=2)
+##
+## MODEL EVALUATION
+##
 
-model.save('Keras_Character_MultiHeadRNN.h5')
-print ("Model saved.")
-del model
+
+# In[222]:
+
+
+### Load computed model
+from keras.models import load_model
+# returns a compiled model identical to the one trained
+model = load_model('Keras_Character_MultiHeadRNN_Adjusted.h5')
+print "Model loaded." 
+
+
+# In[264]:
+
+
+from sklearn import metrics
+
+batch_size = 50
+
+# Evaluate performance
+print "Evaluating test data..."
+loss_and_metrics = model.evaluate([np.asarray(test_X),np.asarray(test_X),np.asarray(test_X),np.asarray(test_X)],
+                                  [np.swapaxes(np.asarray(test_y_flat),0,1)])
+print "\n", model.metrics_names
+print "\n", loss_and_metrics
+
+# Make some predictions
+print "\nPredicting using test data..."
+pred_y = model.predict([np.asarray(test_X),np.asarray(test_X),np.asarray(test_X),np.asarray(test_X)], 
+                       batch_size=batch_size, verbose=1)
+print "\n\nDone prediction."
+
+
+# In[279]:
+
+
+pred_y_collapsed = np.argmax(pred_y, axis=1)
+test_y_collapsed = np.argmax(test_y,axis=1)
+
+#print "\nAUC = ", metrics.roc_auc_score(test_y_collapsed, pred_y_collapsed)
+
+
+# In[280]:
+
+
+# Plot confusion matrix
+#   from scikit-learn examples @
+#   http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html 
+get_ipython().magic(u'matplotlib inline')
+import itertools
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+
+def plot_confusion_matrix(cm, 
+                          classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=90)
+    plt.yticks(tick_marks, classes)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    #plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+# Compute confusion matrix
+cnf_matrix = confusion_matrix(test_y_collapsed, pred_y_collapsed)
+np.set_printoptions(precision=2)
+
+# Plot non-normalized confusion matrix
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix, without normalization')
+
+plt.show()
+
+
+# In[281]:
+
+
+#Plot normalized confusion matrix
+cnf_matrix_pct = cnf_matrix *1.0
+cnf_matrix_pct = np.around(np.array([row*100.0/sum(row) for row in cnf_matrix_pct]), 2)
+
+plt.figure(figsize=(10,10))
+plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
+                      title='Confusion matrix on accuracy percentage')
+plt.show()
+
+
+# In[286]:
+
+
+sample_idx = 20000
+print(pred_y[sample_idx])
+print(test_y[sample_idx])
+
+inv_labels = {v: k for k, v in labels.iteritems()}
+print "Predicted:", inv_labels[np.argmax(pred_y[sample_idx])], "\tActual:", inv_labels[np.argmax(test_y[sample_idx])]
+#print split_text[sample_idx-1:sample_idx+1]
+
+# print one sequence on either side of confused
+sample = split_text[sample_idx-1:sample_idx+1]
+sample = sum(sample, [])
+sample_txt = ""
+tokenizer_rev = {v: k for k, v in tokenizer.word_index.items()}
+for char in sample:
+    sample_txt += tokenizer_rev[char]
+print sample_txt
+
+
+# In[284]:
+
+
+binwidth = .05
+#pred_outs = pred_y/len(labels)
+plt.hist(pred_y.max(axis=1),bins=np.arange(0.0, 1.0, 0.05))
+plt.title('Frequency of predicted max probability per sequence')
+plt.show()
+
+
+# In[ ]:
+
+
+##
+## MODEL OPTIMIZATION
+##
+
+
+# In[ ]:
+
+
+from keras.layers import Input, Dense, SimpleRNN, Bidirectional
+from keras.layers.merge import Maximum, Add, Concatenate
+from keras.callbacks import ReduceLROnPlateau, CSVLogger
+from keras.layers.merge import Average, Maximum
+from keras.optimizers import Adagrad, adam
+from keras.models import Model
+
+from sklearn.model_selection import GridSearchCV
+from keras.wrappers.scikit_learn import KerasClassifier
+
+# define operating vars
+# activation = "relu" #"ReSQRT" 
+# units = 150# 50
+# dropout = 0.0 #0.7646166765488501
+# batch_size = 50# 100
+# epochs = 100
+# optimizer='adamax'#'rmsprop'
+# shuffle=True #False
+
+def create_model(optimizer='rmsprop', learn_rate=0.01,
+                 init_mode1='glorot_uniform', init_mode2='glorot_uniform', 
+                 merge_mode='ave', activation='relu', 
+                 dropout_rate=0.0, neuron_count=50):
+
+    # assemble & compile model
+    input = Input(shape=(max_seq_len,unique_chars,))
+    rnn = Bidirectional(SimpleRNN(units=neuron_count,
+                                  activation=activation,
+                                  recurrent_dropout=dropout_rate,
+                                  kernel_initializer=init_mode1),
+                        merge_mode=merge_mode)(input)
+    
+    soft_out = []
+    for idx in range(0,len(labels)):
+        soft_out.append(Dense(len(labels),
+                              activation='softmax', 
+                              kernel_initializer=init_mode2)(rnn))
+    final_out = Add()(soft_out)
+
+    model = Model(inputs=[input], outputs = final_out) 
+
+    model.compile(loss='categorical_crossentropy', 
+                  optimizer=optimizer, 
+                  metrics=['accuracy'])
+
+    return model
+
+
+# instantiate model
+model = KerasClassifier(build_fn=create_model, verbose=1)
+
+# define the grid search parameters
+epoch = [2]
+batch_sizes = [25,50,75]
+optimizers = ['SGD', 'RMSprop', 'Adagrad', 'Adamax']
+init_modes1 = ['uniform', 'normal', 'zero']
+merge_modes = ['sum', 'mul', 'concat', 'ave']
+activations = ['relu','tanh']
+dropout_rates = [0.0,0.5,0.9]
+neuron_counts = [25,50,75]
+learn_rates = [0.01,0.1,0.2]
+param_grid = dict(batch_size=batch_sizes,
+                  epochs=epoch,
+                  optimizer=optimizers,
+                  learn_rate=learn_rates,
+                  init_mode1=init_modes1,
+                  init_mode2=init_modes2,
+                  merge_mode=merge_modes,
+                  activation=activations,
+                  dropout_rate=dropout_rates,
+                  neuron_count=neuron_counts)
+grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1, verbose=2, cv=2)
+grid_result = grid.fit(train_X, train_y)
+
+# summarize results
+# from http://machinelearningmastery.com/grid-search-hyperparameters-deep-learning-models-python-keras/
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
 
