@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[3]:
+# In[1]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -16,13 +16,13 @@ import random as rn
 rn.seed(3)
 
 
-# In[4]:
+# In[2]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_Character_SimpleRNN.ipynb')
 
 
-# In[5]:
+# In[3]:
 
 
 import glob, os, json, re, unicodedata
@@ -94,7 +94,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[6]:
+# In[4]:
 
 
 #
@@ -124,14 +124,14 @@ for x in range(0,len(loaded_text)):
 print "Character clean-up complete."
 
 
-# In[7]:
+# In[5]:
 
 
 # Have a look at a scrubbed text excerpt
 print loaded_text[200][:750]
 
 
-# In[8]:
+# In[6]:
 
 
 #
@@ -159,7 +159,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[9]:
+# In[7]:
 
 
 #
@@ -181,7 +181,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[10]:
+# In[8]:
 
 
 #
@@ -217,7 +217,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[11]:
+# In[9]:
 
 
 # Have a look at a few split text excerpts
@@ -225,7 +225,7 @@ print split_text[10:15]
 print split_labels[10:15]
 
 
-# In[12]:
+# In[10]:
 
 
 #
@@ -257,7 +257,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8, shuffle_p=
     return train_text, train_labels, test_text, test_labels
 
 
-# In[13]:
+# In[11]:
 
 
 #
@@ -277,7 +277,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "\nClass weights:\n", y_weights
 
 
-# In[14]:
+# In[12]:
 
 
 # Have a look at a few of the split text excerpts; 
@@ -286,7 +286,7 @@ print train_X[10:15]
 print train_y[10:15]
 
 
-# In[15]:
+# In[13]:
 
 
 #
@@ -297,6 +297,7 @@ from keras.utils import to_categorical
 # one-hot encode classes
 train_y = to_categorical(train_y)
 test_y = to_categorical(test_y)
+print "Done encoding labels."
 
 # one-hot encode samples
 train_X = np.array(train_X)
@@ -325,7 +326,7 @@ print train_X[10:11]
 print train_y[10:11]
 
 
-# In[16]:
+# In[ ]:
 
 
 ##
