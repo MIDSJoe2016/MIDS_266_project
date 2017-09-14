@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[317]:
+# In[353]:
 
 
 # Include so results on different machines are (should be) the same.
@@ -12,13 +12,13 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 
-# In[318]:
+# In[339]:
 
 
 get_ipython().system(u'jupyter nbconvert --to script Keras_Character_MultiHeadRNN_Adjusted.ipynb')
 
 
-# In[319]:
+# In[354]:
 
 
 import glob, os, json, re, unicodedata
@@ -90,7 +90,7 @@ for filename in glob.glob(os.path.join(directory, '*.txt')):
 print "Loaded", len(loaded_text), "speeches for", len(set(loaded_labels)), "presidents."
 
 
-# In[320]:
+# In[355]:
 
 
 #
@@ -120,7 +120,7 @@ for x in range(0,len(loaded_text)):
 print "Character clean-up complete."
 
 
-# In[321]:
+# In[356]:
 
 
 #
@@ -148,7 +148,7 @@ print "\nMinimum number of characters per president?"
 print label_min_chars
 
 
-# In[322]:
+# In[357]:
 
 
 #
@@ -170,7 +170,7 @@ print "\nChars w/ counts:"
 print sorted(((v,k) for k,v in tokenizer.word_counts.iteritems()), reverse=True)
 
 
-# In[323]:
+# In[358]:
 
 
 #
@@ -206,7 +206,7 @@ print "Subsequence total count; subsequence label total count:", len( split_text
 print "\nTotal characters:", len( split_text ) * max_seq_len
 
 
-# In[324]:
+# In[359]:
 
 
 #
@@ -232,7 +232,7 @@ def split_test_train(input_text, input_labels, labels, train_pct=0.8):
     return train_text,train_labels,test_text,test_labels
 
 
-# In[325]:
+# In[360]:
 
 
 #
@@ -252,7 +252,7 @@ y_weights = dict(zip(sorted(labels.values()), y_weights))
 print "Class weights:\n", y_weights
 
 
-# In[326]:
+# In[361]:
 
 
 #
@@ -282,7 +282,7 @@ test_X = np.reshape(test_X,(orig_test_X_size,max_seq_len,unique_chars))
 print "...and reshaping to ", test_X.shape
 
 
-# In[327]:
+# In[362]:
 
 
 # custom activation from Bagnall 2015
@@ -312,7 +312,7 @@ get_custom_objects().update({'ReSQRT': ReSQRT})
 # | text handling                   	| sequential, concatenated, balanced 	|
 # | initialisation                  	| gaussian, zero                     	|
 
-# In[328]:
+# In[349]:
 
 
 ##
@@ -379,13 +379,14 @@ plot_model(model, to_file='Keras_Character_MultiHeadRNN_Adjusted.png', show_shap
 print(model.summary())
 
 
-# In[329]:
+# In[350]:
 
 
 # adjust training for new model
 train_y_flat = []
 for x in range(0,len(labels)):
     train_y_flat.append((train_y[:,x] == 1).astype(np.int))
+print
 print len(train_y_flat[0])
 
 test_y_flat = []
@@ -425,7 +426,7 @@ del model
 ##
 
 
-# In[ ]:
+# In[363]:
 
 
 ### Load computed model
@@ -435,7 +436,7 @@ model = load_model('Keras_Character_MultiHeadRNN_Adjusted.h5')
 print "Model loaded." 
 
 
-# In[331]:
+# In[379]:
 
 
 from sklearn import metrics
@@ -453,25 +454,28 @@ print "\n", model.metrics_names
 print "\n", loss_and_metrics
 
 
-# In[332]:
+# In[382]:
 
 
 # Make some predictions
-print "\nPredicting using test data..."
+print "Predicting using test data..."
 pred_y = model.predict(all_test,batch_size=batch_size, verbose=1)
 print "\n\nDone prediction."
 
 
-# In[333]:
+# In[384]:
 
+
+from sklearn.metrics import accuracy_score
 
 pred_y_collapsed = np.argmax(pred_y, axis=1)
 test_y_collapsed = np.argmax(test_y, axis=1)
 
-#print "\nAUC = ", metrics.roc_auc_score(test_y_collapsed, pred_y_collapsed)
+print "Predict accuracy = ", accuracy_score(test_y_collapsed,pred_y_collapsed)
+# print "\nAUC = ", metrics.roc_auc_score(test_y_collapsed, pred_y_collapsed)
 
 
-# In[334]:
+# In[367]:
 
 
 # Plot confusion matrix
@@ -523,7 +527,7 @@ plot_confusion_matrix(cnf_matrix, classes=(sorted(labels, key=labels.get)),
 plt.show()
 
 
-# In[335]:
+# In[368]:
 
 
 #Plot normalized confusion matrix
@@ -536,7 +540,7 @@ plot_confusion_matrix(cnf_matrix_pct, classes=(sorted(labels, key=labels.get)),
 plt.show()
 
 
-# In[336]:
+# In[ ]:
 
 
 sample_idx = 20000
@@ -557,7 +561,7 @@ for char in sample:
 print sample_txt
 
 
-# In[337]:
+# In[ ]:
 
 
 binwidth = .05
